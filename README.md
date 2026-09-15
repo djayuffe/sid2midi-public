@@ -1,4 +1,4 @@
-# sid2midi 3.1.0 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
+# sid2midi 3.1.1 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
 
 A self-contained, dependency-free **SID → MIDI extraction toolkit**. `sid2midi.py`
 loads a PSID/RSID tune (or a Sidplayer MUS file), runs it on a cycle-exact C64
@@ -181,8 +181,9 @@ audio. Known limits of the hardware model:
 - **References:** the CIA and VIC-II are ports of VICE (x64sc); where VICE
   itself is known to differ from real hardware, sid2midi does too.
 - **VIC-II:** no display output; VICE's random VSP-bug memory corruption is not
-  emulated. On the fast path (before a program uses collisions or the light
-  pen) colour RAM reads return the stored byte and unmapped I/O reads `$FF`.
+  emulated. Colour RAM and unmapped I/O reads switch to the full VIC-II for the
+  exact open-bus value, except colour RAM copies made by the KERNAL screen
+  editor, which return the stored nibble on the fast model.
 - **CIA:** no keyboard, joystick or IEC devices (inputs read as released/pulled
   up).
 - **SID:** digital part only; no audio. Remaining reference-data mismatches
@@ -209,10 +210,12 @@ play `$EC80`, timing by CIA #1. Stereo STR companions are not supported.
 
 ## Audit history
 
-`docs/audits/SID2MIDI_3_1_0_AUDIT.md` covers the 3.1.0 reference ports,
+`docs/audits/SID2MIDI_3_1_0_AUDIT.md` covers the 3.1.0 reference ports and
+the 3.1.1 hardware-evidence fixes,
 `docs/audits/SID2MIDI_3_0_0_AUDIT.md` the 3.0.0 accuracy work and
 `docs/audits/SID2MIDI_2_0_0_AUDIT.md` the 2.0.0 fixes; see
-`RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and `RELEASE_NOTES_v2.1.0.md`. The 1.x documents
+`RELEASE_NOTES_v3.1.1.md`, `RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and
+`RELEASE_NOTES_v2.1.0.md`. The 1.x documents
 in `docs/audits/` are kept for history; several of their claims were found
 wrong in the 2.0.0 audit.
 

@@ -305,6 +305,11 @@ def do_writeback(waveform_old, waveform_new, is6581):
     #   6581: noise+pulse+tri/saw -> noise+pulse and $D -> $E write back;
     #   8580: $C -> $9/$E/$F write back.
     if is6581:
+        # $F -> $8: no writeback on both measured 6581 chips (wb_testsuite
+        # samplings 2586/2783). SID/noiselfsrinit expects one, but its reference
+        # data was measured on 8580 chips only.
+        if waveform_old == 0xF and waveform_new == 0x8:
+            return False
         if (waveform_new == 0xC and waveform_old in (0xD, 0xE, 0xF)) or (waveform_old == 0xD and waveform_new == 0xE):
             return True
     elif waveform_old == 0xC and waveform_new in (0x9, 0xE, 0xF):
@@ -431,6 +436,12 @@ class WaveformGenerator:
                     osc3 = self.pulldown[osc3]
                 self.osc3 = osc3
                 self.tri_saw_pipeline = self.wave[ix]
+            elif self.waveform == 0xC and not self.is6581:
+                # 8580 noise+pulse: the OSC3 read pulls one more bit low than the
+                # value written back into the shift register (VICE testprogs
+                # SID/wf12nsr-8580; the wb_testsuite C_to_x_new data needs the
+                # writeback value unchanged)
+                self.osc3 = wo & (wo << 1) & 0xFFF
             else:
                 self.osc3 = wo
             if self.is6581 and (self.waveform & 0x2) and (wo & 0x800) == 0:
@@ -448,7 +459,17 @@ class WaveformGenerator:
     def shift_phase2(self, waveform_old, waveform_new):
         if do_writeback(waveform_old, waveform_new, self.is6581):
             wb = self.waveform_output
-            if not self.is6581 and waveform_old == 0xC and waveform_new == 0xF:
+            if self.is6581 and waveform_new == 0xC and waveform_old in (0xD, 0xE, 0xF):
+                # 6581 into noise+pulse: only the three lowest noise output bits are
+                # written back (register taps 22/20/17), from the register itself.
+                # $F -> $C on both measured 6581 chips, $D/$E -> $C on chip 2783
+                # (wb_testsuite samplings; the test tables use chip 2783).
+                sr = self.shift_register
+                noise = (((sr & (1 << 2)) << 9) | ((sr & (1 << 4)) << 6) | ((sr & (1 << 8)) << 1) |
+                         ((sr & (1 << 11)) >> 3) | ((sr & (1 << 13)) >> 6) | ((sr & (1 << 17)) >> 11) |
+                         ((sr & (1 << 20)) >> 15) | ((sr & (1 << 22)) >> 18))
+                wb = noise & 0xF80
+            elif not self.is6581 and waveform_old == 0xC and waveform_new == 0xF:
                 # the 8580 writes back the new waveform's output here (wb_testsuite C_to_F_new)
                 ix = (self.accumulator ^ (~self.prevVoice.accumulator & self.ring_msb_mask)) >> 12
                 wb = self.wave[ix] & (self.no_pulse | self.pulse_output) & self.no_noise_or_noise_output

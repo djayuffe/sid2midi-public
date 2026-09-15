@@ -1,4 +1,4 @@
-# Project Manifest — sid2midi 3.1.0
+# Project Manifest — sid2midi 3.1.1
 
 ```text
 README.md                               overview, options, mapping, accuracy boundary
@@ -6,12 +6,13 @@ QUICKSTART.md                           first commands
 REQUIREMENTS.md                         runtime requirements
 LICENSE.md                              licence (GPL-2.0-or-later) and third-party material
 COPYING                                 GNU General Public License, version 2
-RELEASE_NOTES_v3.1.0.md                 changes in this release
+RELEASE_NOTES_v3.1.1.md                 changes in this release
+RELEASE_NOTES_v3.1.0.md                 changes in 3.1.0
 RELEASE_NOTES_v3.0.0.md                 changes in 3.0.0
 RELEASE_NOTES_v2.1.0.md                 changes in 2.1.0
 RELEASE_NOTES_v2.0.0.md                 changes in 2.0.0
 RELEASE_NOTES_NMOS_CPU.md               1.x release notes (history)
-FINAL_CLOSURE_REPORT.md                 3.1.0 validation report
+FINAL_CLOSURE_REPORT.md                 3.1.1 validation report
 PROJECT_MANIFEST.md                     this file
 SHA256SUMS.txt                          integrity manifest
 
@@ -29,7 +30,9 @@ examples/simple_pulse.sid               smoke-test tune
 
 tests/test_cia6526_lorenz.py            CIA timers vs Lorenz cia1ta/cia1tb (41,664 cases)
 tests/test_residfp.py                   reSIDfp port vs libresidfp's unit tests
-tests/test_mus_vic_cpu.py               MUS loader, VIC-II tables, CIA port B, RDY rules
+tests/test_mus_vic_cpu.py               MUS loader, VIC-II tables/read-back/VSP fetch, CIA port B, RDY rules
+tests/test_fast_vic_open_bus.py         fast VIC-II path: colour RAM / unmapped I/O open bus
+tests/test_sid_writeback_rules.py       SID noise writeback and 8580 noise+pulse OSC3 rules
 tests/test_sid2midi_hardware.py         CIA/NMI/VIC/SID machine behaviour, cold start, BASIC
 tests/test_sid2midi_release.py          converter + CPU regression tests
 tests/test_cpu6502_nmos_upgrade.py      CPU tests

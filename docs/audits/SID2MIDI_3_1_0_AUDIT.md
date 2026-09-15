@@ -1,4 +1,4 @@
-# sid2midi 3.1.0 Audit — reference ports and remaining gaps
+# sid2midi 3.1.0 / 3.1.1 Audit — reference ports and remaining gaps
 
 ## Goal
 
@@ -116,9 +116,11 @@ entirely, gating on the shift pipeline or on the reset latch, writing back the
 new waveform's output for every transition, and reSID's test-bit hold rule.
 A 6581 rule "no writeback on `$F → $8`" fixed `wb_testsuite` `F_to_8_old`
 but broke `SID/noiselfsrinit` `simple`/`scan` on the 6581, whose reference
-data was measured on 8580 chips; it was removed (VICE passes `noiselfsrinit`
-and fails `F_to_8` too).
-Result: 107 of 112 SID test programs pass; the five failures also fail in VICE.
+data was measured on 8580 chips; 3.1.0 removed it (VICE passes `noiselfsrinit`
+and fails `F_to_8` too). 3.1.1 restores it on the evidence of the real 6581
+sampling logs (see "Changes in 3.1.1").
+3.1.0 result over all 167 SID test programs: 161 pass, 6 fail (3.1.0 column of
+`FINAL_CLOSURE_REPORT.md`).
 
 ### MUS — `mus.py`
 
@@ -128,6 +130,45 @@ player routine is not bundled (`--sidplayer FILE`). Checked with real MUS files
 (Star Wars, Rendez-vous) and a unit test for the assembler, loader and patching.
 Found and fixed: column-0 origin lines crashed the assembler.
 
+## Changes in 3.1.1
+
+3.1.1 closes most of the programs 3.1.0 still failed, each with real-hardware
+evidence: the programs' own reference tables, the readme measurements or the
+sampling logs published with them. VICE itself fails `spritevssprite`, both
+`vsp-tester` variants, `wf12nsr-8580` and the 6581 `D`/`E`/`F → C` and `F → 8`
+writeback programs.
+
+- **Collision clear tail (VIC-II):** `VICII/spritevssprite` reads `$D01E` twice
+  per line while two identical sprites move one pixel per frame. A trace showed
+  the collision band starting exactly 4 pixels before the reference table and
+  ending on the same pixel, so the read's clear extends 4 pixels further than
+  VICE models. With the clear also dropping pixels 0–3 of the following cycle,
+  the program and all 17 other collision, collision-IRQ and sprite-X programs
+  pass. (Shifting the drawing window by 4 pixels instead broke 12 programs.)
+- **VSP idle fetch (VIC-II):** `VICII/vsp-tester` opens the borders, triggers a
+  bad line in idle state with a `$D011` write near cycle 53, and reads the idle
+  byte back through the sprite-background collision register. Its readme gives
+  the addresses measured on real machines: `$38FF` (6569) and `$3807`
+  (8565/8566). Fetching from these in the trigger cycle makes both variants pass
+  and shows `38FF` on screen; the NTSC 6567 uses the 6569 address by analogy.
+- **8580 noise+pulse OSC3 (SID):** `SID/wf12nsr-8580` differed only in the two
+  reads taken while noise+pulse was selected (`$FC` vs `$F8`); the register
+  contents already matched. One extra `noise & (noise << 1)` on the OSC3 read,
+  with the writeback value unchanged, passes it and keeps all 8580 `C_to_x_new`
+  writeback programs passing.
+- **6581 writeback into noise+pulse (SID):** the four 6581 sampling logs
+  published with `wb_testsuite` (chips 2586 and 2783) show `$F -> $C` identical on
+  both chips, while `$D -> $C`, `$E -> $C` and `$D -> $E` differ between the chips
+  and are marked unstable on chip 2783, whose data the tests use. Reconstructing
+  the register from the `$F -> $C` reads showed that only register taps 22, 20
+  and 17 are cleared, i.e. a writeback of `noise & $F80`. Applied to
+  `$D`/`$E`/`$F -> $C`, it passes those three programs.
+- **6581 `$F -> $8` (SID):** both 6581 chips show a plain shift (no writeback),
+  so that rule was restored; `SID/noiselfsrinit`, whose reference data comes
+  from 8580 chips only, now fails on the 6581.
+- **Fast VIC-II path:** colour RAM and unmapped I/O reads switch to the full chip
+  (except KERNAL colour RAM copies); the corpus results did not change.
+
 ## Known gaps
 
 See `FINAL_CLOSURE_REPORT.md` for the failing test programs. Their status in
@@ -135,12 +176,9 @@ VICE x64sc r45942:
 
 | Test | VICE x64sc | Cause in sid2midi |
 |------|------------|-------------------|
-| `VICII/spritevssprite` | fails | collision onset 4 pixels early for identical overlapping sprites; not modelled by the reference either |
-| `VICII/vsp-tester`, `vsp-tester-ntsc` | fail | probe the VSP-bug memory corruption, which is random and chip-dependent; not emulated (VICE disables it by default) |
-| SID `noise_writeback_check_{D,E,F}_to_C_old`, `D_to_E_old` | fail | 6581 transition writeback into noise+pulse |
-| SID `noise_writeback_check_F_to_8_old` | fails | contradicts `noiselfsrinit` (8580 reference data) on the 6581 |
-| SID `wf12nsr-8580` | fails | 8580 noise+pulse output while the test bit toggles (2 mismatching reads) |
+| SID `noise_writeback_check_D_to_E_old` | fails | 6581 `$D -> $E` writeback; the two measured chips disagree and chip 2783 (the test data) marks it unstable |
+| SID `noiselfsrinit/simple`, `scan` (6581) | passes | trade-off with `F_to_8_old`: its reference data comes from 8580 chips, while both measured 6581 chips show no `$F -> $8` writeback |
 
 Other limits: no display output; VICE's random VSP-bug memory corruption is not
-emulated; on the fast path (no collisions/light pen used yet) colour RAM reads
-return the stored byte.
+emulated; on the fast path, colour RAM copies made by the KERNAL screen editor
+return the stored nibble.

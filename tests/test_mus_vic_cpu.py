@@ -194,5 +194,40 @@ class CiaPortBTests(unittest.TestCase):
         self.assertIsNotNone(cia.on_pb)
 
 
+class VspIdleFetchTests(unittest.TestCase):
+    """A bad line triggered in idle state fetches the idle byte from $38FF / $3807 (VICII/vsp-tester)."""
+
+    def fetch_in_trigger_cycle(self, model):
+        import sid2midi as S
+        c = S.C64((), True)
+        c.time_base, c.cpu.cycles = 0, 100
+        c.use_vicii_sc(model)
+        v = c.vic
+        c.ram[0x3FFF], c.ram[0x38FF], c.ram[0x3807] = 0x11, 0x22, 0x33
+        cycle_16 = 15                                  # first FETCH_G cycle (index)
+        v.raster_cycle, v.raster_line = cycle_16 - 1, 0x32
+        v.idle_state, v.bad_line, v.allow_bad_lines, v.ysmooth = 1, 0, 1, 0x32 & 7
+        v.cycle(v.t)
+        return v.last_read_phi1
+
+    def test_nmos_6569_uses_38ff(self):
+        self.assertEqual(self.fetch_in_trigger_cycle("6569"), 0x22)
+
+    def test_hmos_8565_uses_3807(self):
+        self.assertEqual(self.fetch_in_trigger_cycle("8565"), 0x33)
+
+    def test_no_trigger_keeps_the_normal_idle_address(self):
+        import sid2midi as S
+        c = S.C64((), True)
+        c.time_base, c.cpu.cycles = 0, 100
+        c.use_vicii_sc("6569")
+        v = c.vic
+        c.ram[0x3FFF], c.ram[0x38FF] = 0x11, 0x22
+        v.raster_cycle, v.raster_line = 14, 0x33
+        v.idle_state, v.bad_line, v.allow_bad_lines, v.ysmooth = 1, 0, 1, 0x32 & 7
+        v.cycle(v.t)
+        self.assertEqual(v.last_read_phi1, 0x11)
+
+
 if __name__ == "__main__":
     unittest.main()

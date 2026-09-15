@@ -24,6 +24,17 @@ cycle to run.
 """
 import copy
 
+# A $D01E/$D01F read clears the register for the rest of the next cycle's
+# drawing and also for the first 4 pixels of the cycle after it (real-hardware
+# reference data of VICE testprogs VICII/spritevssprite, which VICE fails).
+COLLISION_CLEAR_TAIL = 4
+# A bad line triggered while the VIC-II is idle (DMA delay, the "VSP" case)
+# fetches that cycle's idle byte from $38FF on the 6569 and $3807 on the
+# 8565/8566 instead of $3FFF (VICE testprogs VICII/vsp-tester readme: real
+# machines; VICE fails the test). The NTSC 6567s are given the 6569 address
+# by analogy (not measured).
+VSP_IDLE_ADDR_NMOS, VSP_IDLE_ADDR_HMOS = 0x38FF, 0x3807
+
 NEVER = 1 << 62
 
 PHI1_IDLE, PHI1_REFRESH, PHI1_FETCH_G, PHI1_SPR_PTR, PHI1_SPR_DMA1 = range(5)
@@ -165,6 +176,7 @@ class VicIISC:
         self.pri_buffer = [0] * 8
         self.cycle_flags_pipe = self.table[0]
         self.gfx_deferred = None                       # inputs of the last graphics loop not yet run
+        self.clear_tail = 0                            # register whose clear also drops the next cycle's first pixels
 
     # ---- machine interface ------------------------------------------------------
     @property
@@ -363,7 +375,14 @@ class VicIISC:
         self.raster_cycle = rcyc
         fl = self.cycle_flags = self.table[rcyc]
 
-        self.last_read_phi1 = self._phi1_fetch(fl)
+        if (fl.phi1 == PHI1_FETCH_G and self.idle_state and not self.bad_line
+                and self.allow_bad_lines and (self.raster_line & 7) == self.ysmooth):
+            # bad line triggered during idle state: altered idle byte address
+            data = self._fetch(VSP_IDLE_ADDR_NMOS if self.color_latency else VSP_IDLE_ADDR_HMOS)
+            self.gbuf = data
+            self.last_read_phi1 = data
+        else:
+            self.last_read_phi1 = self._phi1_fetch(fl)
 
         csel = 1 if regs[0x16] & 0x08 else 0
         if fl.brd_l == csel:
@@ -379,12 +398,15 @@ class VicIISC:
 
         self._draw_cycle()
 
+        self.clear_tail = 0
         if self.clear_collisions == 0x1E:
             self.sprite_sprite_collisions = 0
             self.clear_collisions = 0
+            self.clear_tail = 0x1E
         elif self.clear_collisions == 0x1F:
             self.sprite_background_collisions = 0
             self.clear_collisions = 0
+            self.clear_tail = 0x1F
 
         if can_sprite_sprite and self.sprite_sprite_collisions:
             self.irq_status |= 0x4
@@ -702,10 +724,11 @@ class VicIISC:
                         collision_mask |= m
                 else:
                     self.sprite_active_bits &= ~m
+        tail = self.clear_tail if i < COLLISION_CLEAR_TAIL else 0
         if collision_mask:
-            if self.pri_buffer[i]:
+            if self.pri_buffer[i] and tail != 0x1F:
                 self.sprite_background_collisions |= collision_mask
-        if collision_mask & (collision_mask - 1):
+        if collision_mask & (collision_mask - 1) and tail != 0x1E:
             self.sprite_sprite_collisions |= collision_mask
 
     # ---- vicii-lightpen.c -----------------------------------------------------------

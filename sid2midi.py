@@ -54,7 +54,7 @@ from vicii_sc import VicIISC
 import residfp
 import mus
 
-VERSION = "3.1.0"
+VERSION = "3.1.1"
 
 PAL_CLOCK, NTSC_CLOCK = 985248.0, 1022727.0
 PAL_CPL, PAL_LINES = 63, 312
@@ -1167,9 +1167,15 @@ class C64:
             chip, r = self.sidmap[a]
             return chip.read(r)
         if a < 0xDC00:
-            if isinstance(self.vic, VicIISC):           # upper nibble: open bus (phi1 VIC-II fetch)
+            # Colour RAM has 4 bits; the upper nibble is the open bus, i.e. the
+            # VIC-II's phi1 fetch, which only the full chip knows.  The KERNAL
+            # screen editor copies colour RAM without using the upper nibble, so
+            # its reads do not need the full chip (BASIC programs stay fast).
+            if not isinstance(self.vic, VicIISC) and not self._pc_in_kernal_rom():
+                self.use_vicii_sc()
+            if isinstance(self.vic, VicIISC):
                 return (self.ram[a] & 0x0F) | (self.vic.read_phi1() & 0xF0)
-            return self.ram[a]                          # colour RAM
+            return self.ram[a]
         if a < 0xDD00:
             self.predict_dirty = True
             return self.cia1.read(a & 0x0F, self.now())
@@ -1179,7 +1185,9 @@ class C64:
         hit = self.sidmap.get(a)
         if hit:
             return hit[0].read(hit[1])
-        return self.vic.read_phi1() if isinstance(self.vic, VicIISC) else 0xFF
+        if not isinstance(self.vic, VicIISC):
+            self.use_vicii_sc()                         # unmapped I/O reads the open bus
+        return self.vic.read_phi1()
 
     def _io_write(self, a, v):
         if a < 0xD400:
@@ -1237,6 +1245,11 @@ class C64:
         self.cpu.rdy = self.vic.rdy
         self.cpu.rdy_until = 0
         self.predict_dirty = True
+
+    def _pc_in_kernal_rom(self):
+        """The CPU is executing the KERNAL ROM (not RAM under it)."""
+        return (self.cpu.pc >= 0xE000 and self.kernal is not None
+                and ((self.ram[1] | ~self.ram[0]) & 3) >= 2)
 
     def _cia1_port_b(self, clk, byte):
         if not byte & 0x10 and not isinstance(self.vic, VicIISC):
