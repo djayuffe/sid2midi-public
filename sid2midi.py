@@ -54,7 +54,7 @@ from vicii_sc import VicIISC
 import residfp
 import mus
 
-VERSION = "3.1.1"
+VERSION = "3.1.2"
 
 PAL_CLOCK, NTSC_CLOCK = 985248.0, 1022727.0
 PAL_CPL, PAL_LINES = 63, 312
@@ -270,7 +270,7 @@ class MusTune(SidFile):
         try:
             self.player = mus.load_player(player_path)
         except (OSError, mus.MusError, mus.AsmError) as e:
-            raise SidError("Sidplayer player %s: %s" % (player_path, e))
+            raise SidError("Sidplayer player %s: %s" % (player_path, e)) from e
         self.path = path
         self.warnings = []
         self.magic, self.version, self.rsid, self.basic = b"MUS ", 0, False, False
@@ -1011,10 +1011,6 @@ class C64:
     def now(self):
         return self.time_base + self.cpu.cycles
 
-    @property
-    def cia_latch(self):
-        return self.cia1.ta.latch
-
     # ---- interrupt lines ----
     def irq_changed(self, source, low, cycle):
         self.predict_dirty = True
@@ -1426,17 +1422,27 @@ class Trk:
             d = d.encode("latin1", "replace")
         self._a(t, [0xFF, k] + list(vlq(len(d))) + list(d), 0)
 
-    def tempo(self, t, us): self.meta(t, 0x51, bytes([(us >> 16) & 255, (us >> 8) & 255, us & 255]))
-    def marker(self, t, s): self.meta(t, 0x06, s)
-    def cc(self, t, ch, n, v): self._a(t, [0xB0 | ch, n & 0x7F, max(0, min(127, int(v)))], 0)
-    def prog(self, t, ch, p): self._a(t, [0xC0 | ch, p & 0x7F], 0)
+    def tempo(self, t, us):
+        self.meta(t, 0x51, bytes([(us >> 16) & 255, (us >> 8) & 255, us & 255]))
+
+    def marker(self, t, s):
+        self.meta(t, 0x06, s)
+
+    def cc(self, t, ch, n, v):
+        self._a(t, [0xB0 | ch, n & 0x7F, max(0, min(127, int(v)))], 0)
+
+    def prog(self, t, ch, p):
+        self._a(t, [0xC0 | ch, p & 0x7F], 0)
 
     def bend(self, t, ch, val):
         val = max(0, min(16383, val))
         self._a(t, [0xE0 | ch, val & 0x7F, (val >> 7) & 0x7F], 0)
 
-    def on(self, t, ch, n, v): self._a(t, [0x90 | ch, n & 0x7F, max(1, min(127, v))], 2)
-    def off(self, t, ch, n): self._a(t, [0x80 | ch, n & 0x7F, 0], 1)
+    def on(self, t, ch, n, v):
+        self._a(t, [0x90 | ch, n & 0x7F, max(1, min(127, v))], 2)
+
+    def off(self, t, ch, n):
+        self._a(t, [0x80 | ch, n & 0x7F, 0], 1)
 
     def render(self):
         ev = sorted(self.ev, key=lambda e: (e[0], e[1]))
@@ -1455,16 +1461,25 @@ def write_smf(path, ppq, trks):
 
 
 # ----------------------------------------------------- helpers / detection ----
-def hz_exact(hz): return 69 + 12 * math.log2(hz / 440.0) if hz > 0 else None
-def wave_code(w): return (1 if w & 0x10 else 0) | (2 if w & 0x20 else 0) | (4 if w & 0x40 else 0) | (8 if w & 0x80 else 0)
+def hz_exact(hz):
+    return 69 + 12 * math.log2(hz / 440.0) if hz > 0 else None
+
+
+def wave_code(w):
+    return (1 if w & 0x10 else 0) | (2 if w & 0x20 else 0) | (4 if w & 0x40 else 0) | (8 if w & 0x80 else 0)
 
 
 def wave_prog(w):
-    if w & 0x80 and not w & 0x70: return None      # noise
-    if w & 0x40 and w & 0x20: return 81            # pulse+saw
-    if w & 0x40: return 80                         # pulse  -> square lead
-    if w & 0x20: return 81                         # saw    -> saw lead
-    if w & 0x10: return 89                         # tri    -> warm pad
+    if w & 0x80 and not w & 0x70:
+        return None     # noise
+    if w & 0x40 and w & 0x20:
+        return 81       # pulse+saw
+    if w & 0x40:
+        return 80       # pulse -> square lead
+    if w & 0x20:
+        return 81       # saw -> saw lead
+    if w & 0x10:
+        return 89       # tri -> warm pad
     return 80
 
 
@@ -1475,15 +1490,26 @@ class Env:
     EXP = {0xFF: 1, 0x5D: 2, 0x36: 4, 0x1A: 8, 0x0E: 16, 0x06: 30, 0x00: 1}
 
     def __init__(self):
-        self.env = 0; self.state = 2; self.rc = 0; self.ec = 0; self.ep = 1
-        self.hold = True; self.gate = 0; self.ad = 0; self.sr = 0
+        self.env = 0
+        self.state = 2
+        self.rc = 0
+        self.ec = 0
+        self.ep = 1
+        self.hold = True
+        self.gate = 0
+        self.ad = 0
+        self.sr = 0
 
     def trigger(self):
-        self.state = 0; self.hold = False; self.gate = 1
+        self.state = 0
+        self.hold = False
+        self.gate = 1
 
     def set_gate(self, g):
-        if g and not self.gate: self.trigger()
-        elif not g and self.gate: self.state = 2
+        if g and not self.gate:
+            self.trigger()
+        elif not g and self.gate:
+            self.state = 2
         self.gate = g
 
     def _rate(self):
@@ -1493,14 +1519,18 @@ class Env:
     def _step(self):
         if self.state == 0:
             self.env = (self.env + 1) & 0xFF
-            if self.env == 0xFF: self.state = 1
+            if self.env == 0xFF:
+                self.state = 1
         else:
             self.ec += 1
             if self.ec >= self.ep:
                 self.ec = 0
-                if not self.hold and self.env > 0: self.env -= 1
-        if self.env in self.EXP: self.ep = self.EXP[self.env]
-        if self.env == 0: self.hold = True
+                if not self.hold and self.env > 0:
+                    self.env -= 1
+        if self.env in self.EXP:
+            self.ep = self.EXP[self.env]
+        if self.env == 0:
+            self.hold = True
 
     def _frozen(self):
         sus = (self.sr >> 4) * 0x11
@@ -1509,27 +1539,42 @@ class Env:
     def advance(self, cycles):
         if self._frozen():
             return
-        rp = self._rate(); self.rc += cycles
+        rp = self._rate()
+        self.rc += cycles
         guard = self.rc // self.RATE[0] + 2
         g = 0
         while self.rc >= rp and g < guard:
-            self.rc -= rp; self._step(); rp = self._rate(); g += 1
-            if self._frozen(): break
+            self.rc -= rp
+            self._step()
+            rp = self._rate()
+            g += 1
+            if self._frozen():
+                break
 
 
 def compute_env(frames, getregs, gettrig, fcyc):
-    out = [[], [], []]; es = [Env(), Env(), Env()]
+    out = [[], [], []]
+    es = [Env(), Env(), Env()]
     for f in range(len(frames)):
-        regs = getregs(f); trig = gettrig(f); pf = fcyc[f + 1] - fcyc[f]
+        regs = getregs(f)
+        trig = gettrig(f)
+        pf = fcyc[f + 1] - fcyc[f]
         for v in range(3):
-            o = 7 * v; e = es[v]; e.ad = regs[o + 5]; e.sr = regs[o + 6]
+            o = 7 * v
+            e = es[v]
+            e.ad = regs[o + 5]
+            e.sr = regs[o + 6]
             gate = regs[o + 4] & 1
             if trig[v]:
                 e.trigger()
                 if not gate:
-                    e.advance(pf); e.set_gate(0); out[v].append(e.env)
+                    e.advance(pf)
+                    e.set_gate(0)
+                    out[v].append(e.env)
                     continue
-            e.set_gate(gate); e.advance(pf); out[v].append(e.env)
+            e.set_gate(gate)
+            e.advance(pf)
+            out[v].append(e.env)
     return out
 
 
@@ -1581,13 +1626,21 @@ def convert(sid, frames, fcyc, bpm, drum_voice=None, bend=True, do_cc=True, loop
         raise ValueError("bpm must be positive")
     if isinstance(loop, int):
         loop = (0, loop)
-    PPQ = 960; k_tick = PPQ * bpm / (60.0 * sid.clock)
-    tick = lambda c: int(round(c * k_tick))
-    pf = lambda f: fcyc[f + 1] - fcyc[f]
+    PPQ = 960
+    k_tick = PPQ * bpm / (60.0 * sid.clock)
+
+    def tick(c):
+        return int(round(c * k_tick))
+
+    def pf(f):
+        return fcyc[f + 1] - fcyc[f]
+
     N = len(frames)
     meta = Trk(sid.name or "SID tune")
-    meta.tempo(0, int(round(60_000_000 / bpm))); meta.meta(0, 0x58, bytes([4, 2, 24, 8]))
-    if sid.release: meta.meta(0, 0x02, sid.release)
+    meta.tempo(0, int(round(60_000_000 / bpm)))
+    meta.meta(0, 0x58, bytes([4, 2, 24, 8]))
+    if sid.release:
+        meta.meta(0, 0x02, sid.release)
     for line in ("name: %s" % sid.name, "author: %s" % sid.author, "released: %s" % sid.release,
                  "chip: %s  %s %dHz" % (sid.model, "PAL" if sid.pal else "NTSC", sid.rate),
                  "format: %s v%d  songs %d" % (sid.magic.decode(), sid.version, sid.songs),
@@ -1601,31 +1654,52 @@ def convert(sid, frames, fcyc, bpm, drum_voice=None, bend=True, do_cc=True, loop
         s, P = loop
         meta.marker(tick(fcyc[s]), "loop start")
         meta.marker(tick(fcyc[min(s + P, N)]), "loop end")
-    dtr = Trk("Drums"); dtr.cc(0, 9, 7, 110)
+    dtr = Trk("Drums")
+    dtr.cc(0, 9, 7, 110)
     nchips = len(frames[0][0]) if frames else 1
     active = [k for k in range(nchips) if k == 0 or chip_active(frames, k)]
 
     def render_sid(tracks, k, envs):
         ch0 = VOICE_CH[k]
-        cur = [None] * 3; basev = [0] * 3; lastcc = [{} for _ in range(3)]
-        lastbend = [8192] * 3; lastprog = [None] * 3
+        cur = [None] * 3
+        basev = [0] * 3
+        lastcc = [{} for _ in range(3)]
+        lastbend = [8192] * 3
+        lastprog = [None] * 3
 
         def velocity(v, f, sr, master):
             peak = max(envs[v][f:min(f + 4, N)] or [envs[v][f]])
             load = 0.55 * peak + 0.45 * ((sr >> 4) * 0x11)
             return max(8, min(127, int(18 + (load / 255.0) * ((master + 1) / 16.0) * 108)))
 
+        def setbend(tr, ch, v, tk, b):
+            b = max(0, min(16383, b))
+            if b != lastbend[v]:
+                tr.bend(tk, ch, b)
+                lastbend[v] = b
+
         for f in range(N):
             snap = frames[f][0][k]
             regs, trig, tcyc = snap[0], snap[1], snap[2]
-            cyc0 = fcyc[f]; mvol = regs[24] & 15
+            cyc0 = fcyc[f]
+            mvol = regs[24] & 15
             for v in range(3):
-                tr = tracks[v]; ch = ch0[v]; o = 7 * v
-                freq = regs[o] | regs[o + 1] << 8; ctrl = regs[o + 4]; gate = ctrl & 1
-                wave = ctrl & 0xF0; test = ctrl & 8; sync = ctrl & 2; ring = ctrl & 4
-                pw = regs[o + 2] | (regs[o + 3] & 0x0F) << 8; ad = regs[o + 5]; sr = regs[o + 6]
+                tr = tracks[v]
+                ch = ch0[v]
+                o = 7 * v
+                freq = regs[o] | regs[o + 1] << 8
+                ctrl = regs[o + 4]
+                gate = ctrl & 1
+                wave = ctrl & 0xF0
+                test = ctrl & 8
+                sync = ctrl & 2
+                ring = ctrl & 4
+                pw = regs[o + 2] | (regs[o + 3] & 0x0F) << 8
+                ad = regs[o + 5]
+                sr = regs[o + 6]
                 noise = (wave & 0x80) and not (wave & 0x70)
-                src = (v + 2) % 3; sfreq = regs[7 * src] | regs[7 * src + 1] << 8
+                src = (v + 2) % 3
+                sfreq = regs[7 * src] | regs[7 * src + 1] << 8
                 pfreq = sfreq if (sync and sfreq) else freq
                 hz = pfreq * sid.clock / ACC
                 tt = tick(cyc0 + (tcyc[v] if tcyc[v] >= 0 else 0))
@@ -1633,55 +1707,68 @@ def convert(sid, frames, fcyc, bpm, drum_voice=None, bend=True, do_cc=True, loop
                     for num, val in ((71, (regs[23] >> 4) * 8), (70, pw >> 5), (73, (ad >> 4) * 8), (75, (ad & 15) * 8),
                                      (79, (sr >> 4) * 8), (72, (sr & 15) * 8), (20, wave_code(wave) * 8),
                                      (21, 127 if sync else 0), (22, 127 if ring else 0), (23, 127 if test else 0)):
-                        if lastcc[v].get(num) != val: tr.cc(tick(cyc0), ch, num, val); lastcc[v][num] = val
+                        if lastcc[v].get(num) != val:
+                            tr.cc(tick(cyc0), ch, num, val)
+                            lastcc[v][num] = val
                     pg = 13 if ring else wave_prog(wave)
-                    if pg is not None and pg != lastprog[v]: tr.prog(tick(cyc0), ch, pg); lastprog[v] = pg
+                    if pg is not None and pg != lastprog[v]:
+                        tr.prog(tick(cyc0), ch, pg)
+                        lastprog[v] = pg
                 is_drum = ((k == 0 and drum_voice is not None and v == drum_voice)
                            or ((drum_voice is None or k > 0) and noise))
                 if is_drum:
                     if cur[v] is not None:
-                        tr.off(tt, ch, cur[v]); cur[v] = None
+                        tr.off(tt, ch, cur[v])
+                        cur[v] = None
                     if trig[v]:
                         dn = (42 if hz > 1800 else 39 if hz > 400 else 38) if noise else (36 if hz < 400 else 38)
-                        dtr.on(tt, 9, dn, 108); dtr.off(tt + max(1, tick(pf(f)) // 2), 9, dn)
+                        dtr.on(tt, 9, dn, 108)
+                        dtr.off(tt + max(1, tick(pf(f)) // 2), 9, dn)
                     continue
                 ex = hz_exact(hz) if (gate and not test and wave and not noise) else None
                 if ex is not None and not -0.5 <= ex < 127.5:
                     ex = None
                 note = int(round(ex)) if ex is not None else None
-
-                def setbend(tk, b):
-                    b = max(0, min(16383, b))
-                    if b != lastbend[v]: tr.bend(tk, ch, b); lastbend[v] = b
                 if note is not None and (trig[v] or note != cur[v]):
-                    if cur[v] is not None: tr.off(tt, ch, cur[v])
-                    tr.on(tt, ch, note, velocity(v, f, sr, mvol)); cur[v] = note; basev[v] = note
-                    if bend: setbend(tt, 8192 + int(round((ex - note) * 8192 / 2.0)))
+                    if cur[v] is not None:
+                        tr.off(tt, ch, cur[v])
+                    tr.on(tt, ch, note, velocity(v, f, sr, mvol))
+                    cur[v] = note
+                    basev[v] = note
+                    if bend:
+                        setbend(tr, ch, v, tt, 8192 + int(round((ex - note) * 8192 / 2.0)))
                 elif note is None and cur[v] is not None:
-                    tr.off(tt, ch, cur[v]); cur[v] = None
+                    tr.off(tt, ch, cur[v])
+                    cur[v] = None
                 elif note is not None and bend:
-                    setbend(tick(cyc0), 8192 + int(round((ex - basev[v]) * 8192 / 2.0)))
+                    setbend(tr, ch, v, tick(cyc0), 8192 + int(round((ex - basev[v]) * 8192 / 2.0)))
         end = tick(fcyc[N])
         for v in range(3):
-            if cur[v] is not None: tracks[v].off(end, ch0[v], cur[v])
+            if cur[v] is not None:
+                tracks[v].off(end, ch0[v], cur[v])
 
     def render_filter(trk, k):
-        ch = FILTER_CH[k]; last = {}
+        ch = FILTER_CH[k]
+        last = {}
         for f in range(N):
-            regs = frames[f][0][k][0]; t = tick(fcyc[f])
+            regs = frames[f][0][k][0]
+            t = tick(fcyc[f])
             vals = [(74, ((regs[22] << 3) | (regs[21] & 7)) >> 4), (71, (regs[23] >> 4) * 8),
                     (24, ((regs[24] >> 4) & 7) * 16), (25, (regs[23] & 7) * 16), (7, (regs[24] & 15) * 8)]
             if k == 0:
                 vals.append((26, min(127, frames[f][1])))
             for num, val in vals:
-                if last.get(num) != val: trk.cc(t, ch, num, val); last[num] = val
+                if last.get(num) != val:
+                    trk.cc(t, ch, num, val)
+                    last[num] = val
 
     voice_tracks, filter_tracks = [], []
     for k in active:
         label = LABELS[k]
         ts = [Trk("%s V%d" % (label, i + 1)) for i in range(3)]
         for i, tr in enumerate(ts):
-            tr.prog(0, VOICE_CH[k][i], (38, 81, 80)[i]); tr.cc(0, VOICE_CH[k][i], 7, 100)
+            tr.prog(0, VOICE_CH[k][i], (38, 81, 80)[i])
+            tr.cc(0, VOICE_CH[k][i], 7, 100)
             tr.meta(0, 0x04, "SID %s voice %d" % (label, i + 1))
         if N and len(frames[0][0][k]) > 3:               # emulated envelope levels
             envs = [[frames[f][0][k][3][v] for f in range(N)] for v in range(3)]
@@ -1940,22 +2027,22 @@ def main(argv=None):
     try:
         sid = SidFile(a.sid, fixups=not a.no_fixups)
     except (OSError, SidError) as e:
-        sid = None
+        sid, err = None, e
         try:
-            is_mus = mus.voice3_index(open(a.sid, "rb").read()) is not None
+            with open(a.sid, "rb") as fh:
+                is_mus = mus.voice3_index(fh.read()) is not None
         except OSError:
             is_mus = False
         if is_mus and a.sidplayer:
             try:
                 sid = MusTune(a.sid, a.sidplayer)
             except (OSError, SidError) as e2:
-                e = e2
-                sid = None
+                err = e2
         elif is_mus:
-            e = SidError("MUS (Compute!'s Sidplayer) file: the player routine is not bundled; "
+            err = SidError("MUS (Compute!'s Sidplayer) file: the player routine is not bundled; "
                          "give it with --sidplayer FILE")
         if sid is None:
-            print("error: %s: %s" % (a.sid, e), file=sys.stderr)
+            print("error: %s: %s" % (a.sid, err), file=sys.stderr)
             return 2
     for w in sid.warnings:
         print("warning: %s" % w, file=sys.stderr)

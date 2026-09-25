@@ -122,8 +122,10 @@ class MemoryMapTests(unittest.TestCase):
 
     def test_cia_timer_counts_down_and_schedules_underflows(self):
         c = S.C64()
-        c.write(0xDC04, 0x10); c.write(0xDC05, 0x00)     # stopped: the counter loads two ticks later
-        c.begin_frame(10); c.write(0xDC0E, 0x11)
+        c.write(0xDC04, 0x10)
+        c.write(0xDC05, 0x00)     # stopped: the counter loads two ticks later
+        c.begin_frame(10)
+        c.write(0xDC0E, 0x11)
         self.assertEqual(c.read(0xDC04), 0x10)
         c.begin_frame(14)
         self.assertEqual(c.read(0xDC04), 0x0F)             # counting starts two ticks after the write
@@ -169,7 +171,8 @@ class HeaderTests(TempSids):
         self.assertTrue(any("invalid" in w for w in s.warnings))
 
     def test_rejects_garbage(self):
-        p = self.dir / "short.sid"; p.write_bytes(b"PSID\x00\x02")
+        p = self.dir / "short.sid"
+        p.write_bytes(b"PSID\x00\x02")
         with self.assertRaises(S.SidError):
             S.SidFile(str(p))
         p.write_bytes(b"XXXX" + bytes(0x80))
@@ -184,7 +187,8 @@ class HeaderTests(TempSids):
         s = S.SidFile(self.sid(bytes(0x20000), load=0x0E00))
         self.assertEqual(s.end, 0x10000)
         self.assertTrue(any("truncated" in w for w in s.warnings))
-        c = S.C64(); c.load_sid(s)
+        c = S.C64()
+        c.load_sid(s)
         self.assertEqual(len(c.ram), 0x10000)             # 1.x: RAM grew to 275921 bytes
 
     def test_header_repairs(self):
@@ -241,7 +245,8 @@ class PlaybackTests(TempSids):
         self.assertEqual(run.stalled_calls, 0)
         self.assertTrue(any("BRK" in w for w in run.warnings))
 
-    @unittest.skipUnless(S.KERNAL and S.BASIC, "needs roms/kernal.bin and roms/basic.bin (IRQ handler exits through the KERNAL)")
+    @unittest.skipUnless(S.KERNAL and S.BASIC,
+                         "needs roms/kernal.bin and roms/basic.bin (IRQ handler exits through the KERNAL)")
     def test_rsid_cia_irq_rate_is_scheduled_from_timer(self):
         latch = 9827                                       # 2x PAL frame rate
         handler = 0x1030
@@ -266,7 +271,8 @@ class PlaybackTests(TempSids):
         gaps = {b - a for a, b in zip(run.fcyc[2:-2], run.fcyc[3:-1])}
         self.assertEqual(gaps, {latch + 1})
 
-    @unittest.skipUnless(S.KERNAL and S.BASIC, "needs roms/kernal.bin and roms/basic.bin (IRQ handler exits through the KERNAL)")
+    @unittest.skipUnless(S.KERNAL and S.BASIC,
+                         "needs roms/kernal.bin and roms/basic.bin (IRQ handler exits through the KERNAL)")
     def test_rsid_raster_irq_with_cia_disabled(self):
         handler = 0x1030
         init = bytes([0x78,
@@ -320,9 +326,17 @@ def frame(regs=None, trig=(0, 0, 0), digi=0):
 
 
 class FakeSid:
-    name = author = release = "t"; model = "MOS6581"; pal = True; rate = 50
-    magic = b"PSID"; version = 2; songs = 1; init = play = load = 0x1000
-    clock = S.PAL_CLOCK; frame = S.PAL_FRAME; extra_sids = []
+    name = author = release = "t"
+    model = "MOS6581"
+    pal = True
+    rate = 50
+    magic = b"PSID"
+    version = 2
+    songs = 1
+    init = play = load = 0x1000
+    clock = S.PAL_CLOCK
+    frame = S.PAL_FRAME
+    extra_sids = []
 
 
 class ConversionTests(unittest.TestCase):
@@ -343,8 +357,10 @@ class ConversionTests(unittest.TestCase):
 
     def test_voice_switching_to_noise_releases_its_note(self):
         tone = {0x00: 0x45, 0x01: 0x1D, 0x04: 0x11, 0x06: 0xF0, 0x18: 0x0F}
-        noise = dict(tone); noise[0x04] = 0x81
-        frames = [frame(tone, trig=(1, 0, 0))] + [frame(tone)] * 4 + [frame(noise, trig=(1, 0, 0))] + [frame(noise)] * 10
+        noise = dict(tone)
+        noise[0x04] = 0x81
+        frames = ([frame(tone, trig=(1, 0, 0))] + [frame(tone)] * 4
+                  + [frame(noise, trig=(1, 0, 0))] + [frame(noise)] * 10)
         trks = self.convert(frames)
         v1, drums = trks[1], trks[4]
         off = [t for t, _, b in v1.ev if b[0] == 0x80]
@@ -384,14 +400,17 @@ class LoopAndEnvelopeTests(unittest.TestCase):
                                       977, 1954, 3126, 3907, 11720, 19532, 31251])
 
     def test_gate_pulse_inside_one_call_releases(self):
-        regs = bytearray(0x19); regs[6] = 0xF0            # sustain F, release 0, gate now 0
+        regs = bytearray(0x19)
+        regs[6] = 0xF0            # sustain F, release 0, gate now 0
         fcyc = [i * S.PAL_FRAME for i in range(11)]
         env = S.compute_env([0] * 10, lambda f: bytes(regs), lambda f: (1 if f == 0 else 0, 0, 0), fcyc)
         self.assertEqual(env[0][0], 255)
         self.assertLess(env[0][-1], 255)                  # 1.x: stuck at 255 forever
 
     def test_sustained_gate_holds_level(self):
-        regs = bytearray(0x19); regs[4] = 0x11; regs[6] = 0xA0
+        regs = bytearray(0x19)
+        regs[4] = 0x11
+        regs[6] = 0xA0
         fcyc = [i * S.PAL_FRAME for i in range(21)]
         env = S.compute_env([0] * 20, lambda f: bytes(regs), lambda f: (1 if f == 0 else 0, 0, 0), fcyc)
         self.assertEqual(env[0][-1], 0xAA)
@@ -403,16 +422,19 @@ class Mem:
         self.m = bytearray(65536)
         self.writes = []
 
-    def read(self, a): return self.m[a & 0xFFFF]
+    def read(self, a):
+        return self.m[a & 0xFFFF]
 
     def write(self, a, v):
         self.writes.append((a, v))
         self.m[a & 0xFFFF] = v & 0xFF
 
-    def cpu(self): return CPU6502(self.read, self.write)
+    def cpu(self):
+        return CPU6502(self.read, self.write)
 
 
-def _s8(x): return x - 256 if x & 0x80 else x
+def _s8(x):
+    return x - 256 if x & 0x80 else x
 
 
 def clark_adc(a, b, c):
@@ -441,7 +463,8 @@ def clark_sbc(a, b, c):
 
 class CpuReleaseTests(unittest.TestCase):
     def step(self, prog, **reg):
-        mem = Mem(); c = mem.cpu()
+        mem = Mem()
+        c = mem.cpu()
         mem.m[0x1000:0x1000 + len(prog)] = bytes(prog)
         c.pc = 0x1000
         for k, v in reg.items():
@@ -450,13 +473,16 @@ class CpuReleaseTests(unittest.TestCase):
         return c, mem
 
     def test_decimal_mode_matches_clark_for_every_input(self):
-        c = Mem().cpu(); c.D = 1
+        c = Mem().cpu()
+        c.D = 1
         for a in range(256):
             for b in range(256):
                 for cin in (0, 1):
-                    c.a, c.C = a, cin; c._adc(b)
+                    c.a, c.C = a, cin
+                    c._adc(b)
                     self.assertEqual((c.a, c.C, c.N, c.V, c.Z), clark_adc(a, b, cin), ("ADC", a, b, cin))
-                    c.a, c.C = a, cin; c._sbc(b)
+                    c.a, c.C = a, cin
+                    c._sbc(b)
                     self.assertEqual((c.a, c.C, c.N, c.V, c.Z), clark_sbc(a, b, cin), ("SBC", a, b, cin))
 
     def test_page_cross_penalties(self):
@@ -482,7 +508,9 @@ class CpuReleaseTests(unittest.TestCase):
         self.assertEqual(mem.writes, [(0x2000, 0x00), (0x2000, 0x01)])
 
     def test_brk_stop_and_budget_flags(self):
-        mem = Mem(); c = mem.cpu(); c.brk_stop = True
+        mem = Mem()
+        c = mem.cpu()
+        c.brk_stop = True
         mem.m[0x1000] = 0x00
         c.call(0x1000)
         self.assertEqual((c.pc, c.brk_hit, c.timed_out), (0x0001, True, False))
@@ -503,9 +531,11 @@ class CpuReleaseTests(unittest.TestCase):
         c = Mem().cpu()
         for op in range(256):
             self.assertEqual(c.CYC[op], ref[op] or 2, "$%02X" % op)
-        mem = Mem(); c = mem.cpu()
+        mem = Mem()
+        c = mem.cpu()
         mem.m[0x1000:0x1003] = b"\x4C\x00\x20"             # JMP abs = 3 (1.x: 6)
-        c.pc = 0x1000; c.step()
+        c.pc = 0x1000
+        c.step()
         self.assertEqual(c.cycles, 3)
 
     def test_cycle_table_is_per_instance(self):

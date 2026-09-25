@@ -459,11 +459,14 @@ class WaveformGenerator:
     def shift_phase2(self, waveform_old, waveform_new):
         if do_writeback(waveform_old, waveform_new, self.is6581):
             wb = self.waveform_output
-            if self.is6581 and waveform_new == 0xC and waveform_old in (0xD, 0xE, 0xF):
-                # 6581 into noise+pulse: only the three lowest noise output bits are
+            if self.is6581 and ((waveform_new == 0xC and waveform_old in (0xD, 0xE, 0xF)) or
+                                (waveform_old == 0xD and waveform_new == 0xE)):
+                # 6581 extra writebacks: only the three lowest noise output bits are
                 # written back (register taps 22/20/17), from the register itself.
-                # $F -> $C on both measured 6581 chips, $D/$E -> $C on chip 2783
-                # (wb_testsuite samplings; the test tables use chip 2783).
+                # $F -> $C on both measured 6581 chips, $D/$E -> $C and $D -> $E on
+                # chip 2783 (wb_testsuite samplings; the test tables use chip 2783).
+                # For $D -> $E a search over all tap masks matches the 10 reads of
+                # the table only with this mask.
                 sr = self.shift_register
                 noise = (((sr & (1 << 2)) << 9) | ((sr & (1 << 4)) << 6) | ((sr & (1 << 8)) << 1) |
                          ((sr & (1 << 11)) >> 3) | ((sr & (1 << 13)) >> 6) | ((sr & (1 << 17)) >> 11) |
@@ -540,6 +543,15 @@ class WaveformGenerator:
                 self.accumulator = 0
                 self.shift_pipeline = 0
                 self.shift_latch = self.shift_register
+                if self.is6581 and self.waveform > 0x8 and self.waveform != 0xC:
+                    # 6581: the test bit rising in the same write that selects a
+                    # combined noise waveform latches that waveform's output (at
+                    # accumulator 0) into the noise taps. SID/noiselfsrinit ($F8, $80)
+                    # needs it; wb_testsuite F_to_8_old sets the test bit one write
+                    # earlier ($88, $F8, $80) and shows no writeback on both 6581 chips.
+                    ix = (~self.prevVoice.accumulator & self.ring_msb_mask) >> 12
+                    wo = self.wave[ix] & self.no_noise_or_noise_output
+                    self.shift_latch = (self.shift_register & SHIFT_MASK) | get_noise_writeback(wo)
                 self.shift_register_reset = SHIFT_REGISTER_RESET_6581R3 if self.is6581 else SHIFT_REGISTER_RESET_8580R5
             else:
                 self.shift_phase2(waveform_prev, self.waveform)
@@ -650,9 +662,15 @@ class SID:
             delta_t = min(self.nextVoiceSync, cycles)
             if delta_t > 0:
                 for _ in range(delta_t):
-                    wave[0].clock(); wave[1].clock(); wave[2].clock()
-                    env[0].clock(); env[1].clock(); env[2].clock()
-                    wave[0].output(); wave[1].output(); wave[2].output()
+                    wave[0].clock()
+                    wave[1].clock()
+                    wave[2].clock()
+                    env[0].clock()
+                    env[1].clock()
+                    env[2].clock()
+                    wave[0].output()
+                    wave[1].output()
+                    wave[2].output()
                 cycles -= delta_t
                 self.nextVoiceSync -= delta_t
             if self.nextVoiceSync == 0:

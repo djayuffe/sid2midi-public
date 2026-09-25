@@ -1,4 +1,4 @@
-# sid2midi 3.1.0 / 3.1.1 Audit — reference ports and remaining gaps
+# sid2midi 3.1.x Audit — reference ports and hardware-evidence fixes
 
 ## Goal
 
@@ -169,15 +169,48 @@ writeback programs.
 - **Fast VIC-II path:** colour RAM and unmapped I/O reads switch to the full chip
   (except KERNAL colour RAM copies); the corpus results did not change.
 
+## Changes in 3.1.2
+
+3.1.2 closes the last SID programs that 3.1.1 failed, again from the test
+programs' own data.
+
+- **`SID/noiselfsrinit` and `wb_testsuite F_to_8_old` are not in conflict.**
+  Disassembly shows both switch from waveform `$F` with the test bit to
+  waveform `$8` without it. `noiselfsrinit` writes `$F8` straight after `$80`,
+  so the test bit rises in the same write that selects the combined waveform;
+  `F_to_8_old` writes `$88` first, so the test bit is already set when `$F8`
+  arrives. Rule: on the 6581, a test-bit rise together with a combined noise
+  waveform latches that waveform's output (accumulator 0) into the noise taps;
+  the test-bit fall `$F → $8` itself still writes nothing back. Both
+  `noiselfsrinit` programs pass on the 6581 and the 8580, and `F_to_8_old`
+  still passes.
+- **`wb_testsuite D_to_E_old`.** A trace showed libresidfp clearing every noise
+  tap (the `$D` output at accumulator 0 is zero), while the table's first read
+  `$FC` shows only tap 22 cleared before the first shift. All 65,536
+  combinations of a writeback mask at the test-bit fall and a pulldown mask
+  during the following `$E` cycles were simulated with the exact register
+  shift: the 10 expected reads match only when the writeback keeps noise output
+  bits 11–7, the same `noise & $F80` rule as `$D`/`$E`/`$F → $C`. The rule was
+  extended to `$D → $E`; the neighbouring 6581 programs still pass.
+
+Code clean-up (no behaviour change): one statement per line (verified by
+comparing the AST before and after), unused variables and an unused property
+removed, lambdas and a loop closure turned into functions, a `ruff.toml` lint
+configuration; the SingleStepTests harness is now shipped as
+`tools/singlesteptests.py`.
+
 ## Known gaps
 
-See `FINAL_CLOSURE_REPORT.md` for the failing test programs. Their status in
-VICE x64sc r45942:
+See `FINAL_CLOSURE_REPORT.md` for the results.
 
-| Test | VICE x64sc | Cause in sid2midi |
-|------|------------|-------------------|
-| SID `noise_writeback_check_D_to_E_old` | fails | 6581 `$D -> $E` writeback; the two measured chips disagree and chip 2783 (the test data) marks it unstable |
-| SID `noiselfsrinit/simple`, `scan` (6581) | passes | trade-off with `F_to_8_old`: its reference data comes from 8580 chips, while both measured 6581 chips show no `$F -> $8` writeback |
+Of the programs available to the earlier runs, none fails in 3.1.2: 855 of 855,
+all rerun on the final code in one sweep of the whole test list. The 26
+programs that had never been downloaded were then fetched: 19 pass, 7 fail
+(power-on RAM pattern, disk autostart, and three undiagnosed); the validation
+report lists them. Remaining limits are listed in `docs/ACCURACY.md`: real
+6581 chips differ from each other in some noise writeback transitions (sid2midi
+follows chip 2783, which the tests were built from), and the NTSC 6567 VSP
+idle-fetch address is not measured.
 
 Other limits: no display output; VICE's random VSP-bug memory corruption is not
 emulated; on the fast path, colour RAM copies made by the KERNAL screen editor

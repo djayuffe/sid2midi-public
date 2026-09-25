@@ -108,7 +108,8 @@ def main(argv=None) -> int:
         try:
             with open(path, "rb") as fh:
                 s = check_smf(fh.read())
-            print("OK   %s  format %d, %d tracks, %d notes, %d CC" % (path, s["format"], s["tracks"], s["notes"], s["cc"]))
+            print("OK   %s  format %d, %d tracks, %d notes, %d CC"
+                  % (path, s["format"], s["tracks"], s["notes"], s["cc"]))
         except (OSError, MidiError) as e:
             print("FAIL %s  %s" % (path, e))
             rc = 1

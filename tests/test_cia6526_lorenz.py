@@ -111,9 +111,8 @@ def expected(i4, ie, b4, be, bit):
 
     def x119():
         r4 = b4
-        if b4 >= 2:
-            if i4 >= 0x0C or (i4 < 0x0A and (b4 >= 0x0F or ((i4 << 4) | b4) & 0xFF not in NODEC119)):
-                r4 -= 1
+        if b4 >= 2 and (i4 >= 0x0C or (i4 < 0x0A and (b4 >= 0x0F or ((i4 << 4) | b4) & 0xFF not in NODEC119))):
+            r4 -= 1
         rd = flags(b4) | (irq if i4 < 0x0C else 0)
         re = 0x08 if (0x0A <= i4 < 0x0C or b4 < 0x0A) else 0x09
         return r4, rd, re
@@ -185,7 +184,9 @@ def measure(i4, ie, b4, be, timer_b):
     lo, cr, bit = (0x06, 0x0F, 0x02) if timer_b else (0x04, 0x0E, 0x01)
     t = 10
     if not timer_b:                               # IOINIT leaves timer A running at 60 Hz
-        cia.write(0x04, 0x25, t); cia.write(0x05, 0x40, t + 4); cia.write(0x0E, 0x11, t + 8)
+        cia.write(0x04, 0x25, t)
+        cia.write(0x05, 0x40, t + 4)
+        cia.write(0x0E, 0x11, t + 8)
     cia.write(0x0D, 0x7F, t + 100)
     cia.write(0x0D, 0x80 | bit, t + 106)
     b = t + 5000

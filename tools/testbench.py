@@ -10,7 +10,8 @@ Paths in it are relative to testprogs/testbench/; TESTPROGS_ROOT is the testprog
 directory.  Only "exitcode" tests are run on a C64 model with old 6526 CIAs;
 cia-new -> 6526A CIAs.  Options: sid-old -> 6581, sid-new -> 8580,
 vicii-ntsc/vicii-ntscold -> NTSC (6567R8 / 6567R56A), vicii-new -> 8565/8562;
-the cycle-exact VIC-II (vicii_sc.py) is used unless TESTBENCH_VIC=fast.  Tests that mount disks or cartridges are skipped.
+the cycle-exact VIC-II (vicii_sc.py) is used unless TESTBENCH_VIC=fast.  Tests that mount
+disks or cartridges are skipped.
 
 A test passes when it writes $00 to the debug cartridge register $D7FF, fails on
 any other value, and times out when the cycle limit from the list is reached.
@@ -111,7 +112,8 @@ def execute(test):
     elif r.reason == "jam":
         status, detail = "FAIL", "CPU jam at $%04X" % r.pc
     else:
-        status, detail = ("PASS" if test.expect_error else "TIMEOUT"), "no exit after %d cycles (pc $%04X)" % (r.cycles, r.pc)
+        status = "PASS" if test.expect_error else "TIMEOUT"
+        detail = "no exit after %d cycles (pc $%04X)" % (r.cycles, r.pc)
     return test.name, status, detail, r.seconds
 
 

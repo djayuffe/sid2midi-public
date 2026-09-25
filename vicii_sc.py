@@ -465,7 +465,7 @@ class VicIISC:
                     if self.spr_mcbase[i] == 63:
                         self.sprite_dma &= ~(1 << i)
         elif chk == SPR_DMA:
-            enable, y_exp = regs[0x15], regs[0x17]
+            enable = regs[0x15]
             if enable:
                 low = line & 0xFF
                 for i in range(8):
@@ -696,7 +696,6 @@ class VicIISC:
                 self.sprite_active_bits |= m
 
     def _draw_sprites(self, i):
-        active_sprite = -1
         collision_mask = 0
         sbuf, spix = self.sbuf_reg, self.sbuf_pixel_reg
         for s in range(7, -1, -1):
@@ -720,7 +719,6 @@ class VicIISC:
                         else:
                             self.sbuf_expx_flops |= m
                     if spix[s]:
-                        active_sprite = s
                         collision_mask |= m
                 else:
                     self.sprite_active_bits &= ~m

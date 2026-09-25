@@ -1,4 +1,4 @@
-# Project Manifest — sid2midi 3.1.1
+# Project Manifest — sid2midi 3.1.2
 
 ```text
 README.md                               overview, options, mapping, accuracy boundary
@@ -6,15 +6,17 @@ QUICKSTART.md                           first commands
 REQUIREMENTS.md                         runtime requirements
 LICENSE.md                              licence (GPL-2.0-or-later) and third-party material
 COPYING                                 GNU General Public License, version 2
-RELEASE_NOTES_v3.1.1.md                 changes in this release
+RELEASE_NOTES_v3.1.2.md                 changes in this release
+RELEASE_NOTES_v3.1.1.md                 changes in 3.1.1
 RELEASE_NOTES_v3.1.0.md                 changes in 3.1.0
 RELEASE_NOTES_v3.0.0.md                 changes in 3.0.0
 RELEASE_NOTES_v2.1.0.md                 changes in 2.1.0
 RELEASE_NOTES_v2.0.0.md                 changes in 2.0.0
 RELEASE_NOTES_NMOS_CPU.md               1.x release notes (history)
-FINAL_CLOSURE_REPORT.md                 3.1.1 validation report
+FINAL_CLOSURE_REPORT.md                 3.1.2 validation report
 PROJECT_MANIFEST.md                     this file
 SHA256SUMS.txt                          integrity manifest
+ruff.toml                               lint configuration (development only)
 
 sid2midi.py                             converter, C64 machine, fast VIC-II model
 cpu6502.py                              cycle-exact NMOS 6502/6510 core
@@ -37,17 +39,25 @@ tests/test_sid2midi_hardware.py         CIA/NMI/VIC/SID machine behaviour, cold 
 tests/test_sid2midi_release.py          converter + CPU regression tests
 tests/test_cpu6502_nmos_upgrade.py      CPU tests
 tests/test_cpu6502_final_100_closure.py CPU tests
+tests/test_singlesteptests_tool.py      SingleStepTests harness
 
 tools/testbench.py                      VICE test programs on the emulated C64
 tools/midicheck.py                      structural MIDI validator
 tools/validate_corpus.py                batch conversion + validation
 tools/cpu_opcode_coverage_report.py     opcode coverage report
+tools/singlesteptests.py                CPU vs SingleStepTests 6502 vectors
 
 validate_release.sh                     full validation (tests, smoke, SHA256, layout)
 validate_nmos_cpu_release.sh            tests, coverage and smoke conversion
 run_example.sh                          smoke conversion helper
 
-docs/audits/SID2MIDI_3_1_0_AUDIT.md     current audit (reference ports, remaining gaps)
+docs/README.md                          documentation index
+docs/ARCHITECTURE.md                    modules, machine, timing, capture, drivers, Python API
+docs/ACCURACY.md                        evidence per chip, deviations from the references, limits
+docs/MIDI_MAPPING.md                    the MIDI output in detail
+docs/TESTING.md                         unit tests, VICE test programs, SingleStepTests, corpus
+docs/DEVELOPMENT.md                     conventions, accuracy changes, release checklist
+docs/audits/SID2MIDI_3_1_0_AUDIT.md     current audit (3.1.x reference ports and fixes)
 docs/audits/SID2MIDI_3_0_0_AUDIT.md     3.0.0 audit
 docs/audits/SID2MIDI_2_0_0_AUDIT.md     2.0.0 audit
 docs/audits/CPU_OPCODE_COVERAGE_REPORT.txt

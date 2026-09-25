@@ -23,12 +23,28 @@ HAVE_ROMS = bool(S.KERNAL and S.BASIC)
 
 
 # ---------------------------------------------------------------- assembler --
-def w16(a): return bytes([a & 0xFF, a >> 8])
-def POKE(a, v): return bytes([0xA9, v]) + b"\x8D" + w16(a)
-def STA(a): return b"\x8D" + w16(a)
-def LDA(a): return b"\xAD" + w16(a)
-def INC(a): return b"\xEE" + w16(a)
-def JMP(a): return b"\x4C" + w16(a)
+def w16(a):
+    return bytes([a & 0xFF, a >> 8])
+
+
+def POKE(a, v):
+    return bytes([0xA9, v]) + b"\x8D" + w16(a)
+
+
+def STA(a):
+    return b"\x8D" + w16(a)
+
+
+def LDA(a):
+    return b"\xAD" + w16(a)
+
+
+def INC(a):
+    return b"\xEE" + w16(a)
+
+
+def JMP(a):
+    return b"\x4C" + w16(a)
 
 
 SEI, CLI, RTS, RTI, PHA, PLA, NOP = b"\x78", b"\x58", b"\x60", b"\x40", b"\x48", b"\x68", b"\xEA"
@@ -85,13 +101,16 @@ class CiaTimerTests(unittest.TestCase):
         return self.c.read(0xDC00 + r)
 
     def test_start_delay_and_period(self):
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0)            # stopped: a latch high write loads the counter
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)            # stopped: a latch high write loads the counter
         self.w(10, 0x0E, 0x11)                             # force load + start
         values = [self.rd(t, 0x04) for t in range(10, 25)]
         self.assertEqual(values, [9, 9, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1, 9, 9, 8])
 
     def test_old_cia_irq_follows_flag_one_tick_later(self):
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0); self.w(0, 0x0D, 0x81)
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)
+        self.w(0, 0x0D, 0x81)
         self.w(10, 0x0E, 0x11)                             # underflow on tick 21
         self.assertEqual(self.rd(23, 0x0D), 0x81)
         self.assertFalse(self.c.irq_low_at(22))
@@ -99,7 +118,9 @@ class CiaTimerTests(unittest.TestCase):
         self.assertFalse(self.c.irq_low_at(24))           # acknowledged by the read at 23
 
     def test_icr_read_on_flag_cancels_the_interrupt(self):
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0); self.w(0, 0x0D, 0x81)
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)
+        self.w(0, 0x0D, 0x81)
         self.w(10, 0x0E, 0x11)
         self.assertEqual(self.rd(22, 0x0D), 0x01)
         self.assertEqual(self.rd(26, 0x0D), 0x00)          # next instruction's read
@@ -109,7 +130,9 @@ class CiaTimerTests(unittest.TestCase):
     def test_back_to_back_icr_reads_keep_bit_7(self):
         # INC $DC0D,X: the dummy read clears the timer flag, but the old 6526
         # still reports the pending bit 7 on the next cycle's read (dd0dtest).
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0); self.w(0, 0x0D, 0x81)
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)
+        self.w(0, 0x0D, 0x81)
         self.w(10, 0x0E, 0x11)
         self.assertEqual(self.rd(22, 0x0D), 0x01)
         self.assertEqual(self.rd(23, 0x0D), 0x80)
@@ -117,14 +140,16 @@ class CiaTimerTests(unittest.TestCase):
         self.assertFalse(self.c.irq_low_at(23))
 
     def test_one_shot_stops_at_underflow(self):
-        self.w(0, 0x04, 2); self.w(0, 0x05, 0)
+        self.w(0, 0x04, 2)
+        self.w(0, 0x05, 0)
         self.w(10, 0x0E, 0x09)                             # start, one-shot, no force load
         self.assertEqual(self.rd(13, 0x0E), 0x09)
         self.assertEqual(self.rd(14, 0x0E), 0x08)
         self.assertEqual(self.rd(100, 0x04), 2)
 
     def test_cnt_to_phi2_switch_takes_two_ticks(self):
-        self.w(0, 0x04, 0xFF); self.w(0, 0x05, 0xFF)
+        self.w(0, 0x04, 0xFF)
+        self.w(0, 0x05, 0xFF)
         self.w(10, 0x0E, 0x21)                             # started, counting CNT (never pulsed)
         self.w(100, 0x0E, 0x01)
         self.assertEqual(self.rd(104, 0x04), 253)
@@ -132,7 +157,10 @@ class CiaTimerTests(unittest.TestCase):
         self.assertEqual(self.rd(112, 0x04), 247)
 
     def test_timer_b_counts_timer_a_underflows(self):
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0); self.w(0, 0x06, 5); self.w(0, 0x07, 0)
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)
+        self.w(0, 0x06, 5)
+        self.w(0, 0x07, 0)
         self.w(10, 0x0F, 0x51)                             # timer B: force load, start, TA underflows
         self.w(10, 0x0E, 0x11)                             # timer A underflows on ticks 21, 31, ...
         # The underflow takes phi2's place in the two-stage count pipeline:
@@ -142,18 +170,22 @@ class CiaTimerTests(unittest.TestCase):
         self.assertEqual(self.rd(34, 0x06), 3)
 
     def test_timer_b_cnt_mode_never_counts(self):
-        self.w(0, 0x06, 3); self.w(0, 0x07, 0); self.w(10, 0x0F, 0x31)
+        self.w(0, 0x06, 3)
+        self.w(0, 0x07, 0)
+        self.w(10, 0x0F, 0x31)
         self.assertEqual((self.rd(1000, 0x06), self.rd(1000, 0x0D)), (3, 0))
 
     def test_pb6_toggle_output(self):
-        self.w(0, 0x04, 9); self.w(0, 0x05, 0)
+        self.w(0, 0x04, 9)
+        self.w(0, 0x05, 0)
         self.w(10, 0x0E, 0x17)                             # start, PB6 on, toggle, force load
         self.assertTrue(self.rd(11, 0x01) & 0x40)          # starting sets the toggle high
         self.assertFalse(self.rd(22, 0x01) & 0x40)         # underflow on tick 21 toggles
         self.assertTrue(self.rd(32, 0x01) & 0x40)
 
     def test_ports_read_outputs_and_pulled_up_inputs(self):
-        self.w(0, 0x02, 0xF0); self.w(0, 0x00, 0x5A)
+        self.w(0, 0x02, 0xF0)
+        self.w(0, 0x00, 0x5A)
         self.assertEqual(self.rd(0, 0x00), 0x5F)
 
     def test_vic_raster_flag_latches_without_mask(self):
@@ -170,26 +202,38 @@ class RefEnvelope:
     RATE = (9, 32, 63, 95, 149, 220, 267, 313, 392, 977, 1954, 3126, 3907, 11720, 19532, 31251)
 
     def __init__(self):
-        self.counter = 0; self.a = self.d = self.s = self.r = 0; self.gate = 0
-        self.rc = 0; self.period = self.RATE[0]; self.exp = 0; self.exp_period = 1
-        self.state = 2; self.hold = True
+        self.counter = 0
+        self.a = self.d = self.s = self.r = 0
+        self.gate = 0
+        self.rc = 0
+        self.period = self.RATE[0]
+        self.exp = 0
+        self.exp_period = 1
+        self.state = 2
+        self.hold = True
 
     def control(self, v):
         g = v & 1
         if g and not self.gate:
-            self.state = 0; self.period = self.RATE[self.a]; self.hold = False
+            self.state = 0
+            self.period = self.RATE[self.a]
+            self.hold = False
         elif self.gate and not g:
-            self.state = 2; self.period = self.RATE[self.r]
+            self.state = 2
+            self.period = self.RATE[self.r]
         self.gate = g
 
     def ad(self, v):
         self.a, self.d = v >> 4, v & 15
-        if self.state == 0: self.period = self.RATE[self.a]
-        elif self.state == 1: self.period = self.RATE[self.d]
+        if self.state == 0:
+            self.period = self.RATE[self.a]
+        elif self.state == 1:
+            self.period = self.RATE[self.d]
 
     def sr(self, v):
         self.s, self.r = v >> 4, v & 15
-        if self.state == 2: self.period = self.RATE[self.r]
+        if self.state == 2:
+            self.period = self.RATE[self.r]
 
     def cycle(self):
         self.rc += 1
@@ -208,7 +252,8 @@ class RefEnvelope:
         if self.state == 0:
             self.counter = (self.counter + 1) & 0xFF
             if self.counter == 0xFF:
-                self.state = 1; self.period = self.RATE[self.d]
+                self.state = 1
+                self.period = self.RATE[self.d]
         elif self.state == 1:
             if self.counter != self.s * 0x11:
                 self.counter -= 1
@@ -222,13 +267,16 @@ class RefEnvelope:
 
 class RefWave:
     def __init__(self):
-        self.freq = self.acc = 0; self.lfsr = 0x7FFFF8
-        self.test = self.sync = self.ring = 0; self.msb_rising = False
+        self.freq = self.acc = 0
+        self.lfsr = 0x7FFFF8
+        self.test = self.sync = self.ring = 0
+        self.msb_rising = False
 
     def control(self, v):
         self.ring, self.sync = v & 4, v & 2
         if v & 8:
-            self.acc = 0; self.lfsr = 0
+            self.acc = 0
+            self.lfsr = 0
         elif self.test:
             self.lfsr = 0x7FFFF8
         self.test = v & 8
@@ -262,11 +310,14 @@ class SidModelTests(unittest.TestCase):
             for i in range(160):
                 op, v = rng.random(), rng.randrange(256)
                 if op < 0.4:
-                    fast.write_control(v & 1); ref.control(v & 1)
+                    fast.write_control(v & 1)
+                    ref.control(v & 1)
                 elif op < 0.7:
-                    fast.write_ad(v); ref.ad(v)
+                    fast.write_ad(v)
+                    ref.ad(v)
                 else:
-                    fast.write_sr(v); ref.sr(v)
+                    fast.write_sr(v)
+                    ref.sr(v)
                 dt = rng.choice((rng.randrange(40), rng.randrange(1500), rng.randrange(9000)))
                 fast.clock(dt)
                 for _ in range(dt):
@@ -283,7 +334,8 @@ class SidModelTests(unittest.TestCase):
         for _ in range(3000):
             ref.cycle()
         self.assertEqual(fast.counter, 0xFF)
-        fast.write_control(0); ref.control(0)
+        fast.write_control(0)
+        ref.control(0)
         for chunk in (7, 1000, 25000, 40000):
             fast.clock(chunk)
             for _ in range(chunk):
@@ -293,11 +345,13 @@ class SidModelTests(unittest.TestCase):
 
     def test_adsr_delay_bug(self):
         fast, ref = S.SidEnvelope(), RefEnvelope()
-        fast.write_sr(0x0F); ref.sr(0x0F)                  # release rate 31251
+        fast.write_sr(0x0F)
+        ref.sr(0x0F)                  # release rate 31251
         fast.clock(20000)
         for _ in range(20000):
             ref.cycle()
-        fast.write_sr(0x00); ref.sr(0x00)                  # period 9 below the counter: wraps via $7FFF
+        fast.write_sr(0x00)
+        ref.sr(0x00)                  # period 9 below the counter: wraps via $7FFF
         fast.clock(15000)
         for _ in range(15000):
             ref.cycle()
@@ -319,7 +373,8 @@ class SidModelTests(unittest.TestCase):
                 ctl = rng.randrange(256)
                 if rng.random() < 0.85:
                     ctl &= 0xF7
-                fast[v].write_control(ctl); ref[v].control(ctl)
+                fast[v].write_control(ctl)
+                ref[v].control(ctl)
             dt = rng.choice((rng.randrange(20), rng.randrange(3000)))
             S.clock_oscillators(fast, dt)
             for _ in range(dt):
@@ -379,11 +434,13 @@ class ReadbackTests(TempDir):
                 r = rng.choice((0x00, 0x04, 0x12, 0x18, 0x19, 0x1A, 0x1F))
                 if rng.random() < 0.4:
                     v = rng.randrange(256)
-                    ref.ageBusValue(t - getattr(ref, "_t", 0)); ref._t = t
+                    ref.ageBusValue(t - getattr(ref, "_t", 0))
+                    ref._t = t
                     ref.busValue, ref.busValueTtl = v, ref.modelTTL
                     c.write(0xD400 + r, v)
                 else:
-                    ref.ageBusValue(t - getattr(ref, "_t", 0)); ref._t = t
+                    ref.ageBusValue(t - getattr(ref, "_t", 0))
+                    ref._t = t
                     if r in (0x19, 0x1A):
                         ref.busValue, ref.busValueTtl = 0xFF, ref.modelTTL
                     else:

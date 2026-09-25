@@ -3,4 +3,4 @@ handlers: 256/256
 official opcodes covered: 151/151
 jam opcodes: 02 12 22 32 42 52 62 72 92 B2 D2 F2
 page-cross penalty opcodes: 32
-policy: official + common NMOS illegal opcodes implemented; KIL/JAM safely stops; remaining unstable opcodes bounded as recoverable NOPs for SID extraction
+policy: all 256 NMOS opcodes implemented, including the undocumented ones; JAM opcodes halt the CPU

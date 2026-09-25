@@ -1,7 +1,7 @@
 # Quickstart
 
 ```bash
-unzip sid2midi_superhuman_cpu_nmos_v3.1.1.zip
+unzip sid2midi_superhuman_cpu_nmos_v3.1.2.zip
 cd sid2midi_superhuman_cpu_nmos
 ./validate_release.sh
 ```

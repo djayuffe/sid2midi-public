@@ -60,6 +60,42 @@ class NoisePulseOutputTests(unittest.TestCase):
         self.assertEqual(latch_taps_cleared, [22, 20, 17])
         self.assertTrue(all((g.shift_latch >> t) & 1 for t in (13, 11, 8, 4, 2)))
 
+    def test_6581_d_to_e_uses_the_same_partial_writeback(self):
+        g = generator(True, 0xD)
+        g.shift_latch = g.shift_register
+        g.waveform_output = 0x000
+        g.waveform = 0xE
+        g.shift_phase2(0xD, 0xE)                                  # wb_testsuite D_to_E_old
+        self.assertEqual([t for t in (22, 20, 17) if (g.shift_latch >> t) & 1], [])
+        self.assertTrue(all((g.shift_latch >> t) & 1 for t in (13, 11, 8, 4, 2)))
+
+
+class TestBitRiseTests(unittest.TestCase):
+    """6581: a test-bit rise in the same write that selects a combined noise waveform
+    latches that waveform's output into the noise taps (SID/noiselfsrinit); a rise one
+    write earlier does not (wb_testsuite F_to_8_old)."""
+
+    def generator_after(self, is6581, *controls):
+        g = generator(is6581, 0x8)
+        g.model_pulldown = [None] * 5
+        for control in controls:
+            g.writeCONTROL_REG(control)
+        return g
+
+    def test_rise_with_combined_waveform_latches_its_output_on_the_6581(self):
+        g = self.generator_after(True, 0x80, 0xF8)
+        wo = R.WAVE_TABLE[0xF & 0x3][0] & g.no_noise_or_noise_output
+        self.assertEqual(g.shift_latch, (g.shift_register & R.SHIFT_MASK) | R.get_noise_writeback(wo))
+        self.assertNotEqual(g.shift_latch, g.shift_register)
+
+    def test_no_latch_when_the_test_bit_was_already_set(self):
+        g = self.generator_after(True, 0x88, 0xF8)
+        self.assertEqual(g.shift_latch, g.shift_register)
+
+    def test_no_latch_on_the_8580(self):
+        g = self.generator_after(False, 0x80, 0xF8)
+        self.assertEqual(g.shift_latch, g.shift_register)
+
 
 if __name__ == "__main__":
     unittest.main()

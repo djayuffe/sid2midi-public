@@ -41,7 +41,9 @@ class EnvelopeGeneratorTests(unittest.TestCase):
             if g.readENV() == 0xFF:
                 break
         g.writeCONTROL_REG(0x00)
-        g.clock(); g.clock(); g.clock()
+        g.clock()
+        g.clock()
+        g.clock()
         g.writeCONTROL_REG(0x01)
         for _ in range(315):
             g.clock()
@@ -55,7 +57,9 @@ class EnvelopeGeneratorTests(unittest.TestCase):
         g.clock()
         self.assertEqual(g.readENV(), 0)
         g.writeCONTROL_REG(0x01)
-        g.clock(); g.clock(); g.clock()
+        g.clock()
+        g.clock()
+        g.clock()
         g.writeCONTROL_REG(0x00)
         for _ in range(315):
             g.clock()

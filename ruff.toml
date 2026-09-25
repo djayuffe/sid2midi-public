@@ -1,0 +1,16 @@
+# Lint configuration (ruff, https://docs.astral.sh/ruff/). Not needed to run sid2midi.
+#   ruff check .
+line-length = 120
+target-version = "py39"
+
+[lint]
+select = ["E", "F", "W", "B", "SIM"]
+ignore = [
+    "SIM108",   # if/else blocks are kept where they mirror the reference code
+]
+
+[lint.per-file-ignores]
+# Statement-by-statement ports of VICE / libresidfp keep the reference's control flow.
+"cia_vice.py" = ["SIM102"]
+"vicii_sc.py" = ["SIM102"]
+"residfp.py" = ["SIM103"]

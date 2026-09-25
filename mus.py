@@ -70,7 +70,7 @@ def credits(buf):
         i += 1
     if line.strip():
         lines.append(line.strip())
-    return [l for l in lines if l]
+    return [s for s in lines if s]
 
 
 # ------------------------------------------------------------------ assembler --

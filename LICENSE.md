@@ -9,7 +9,7 @@ software: you can redistribute and/or modify them under the terms of the GNU
 General Public License as published by the Free Software Foundation, either
 version 2 of the License or (at your option) any later version.
 
-`sid2midi.py` uses `residfp.py`, so sid2midi 3.1.1 as a whole is distributed
+`sid2midi.py` uses `residfp.py`, so sid2midi 3.1.2 as a whole is distributed
 under the **GNU General Public License, version 2 or later**
 (SPDX: `GPL-2.0-or-later`). It is distributed WITHOUT ANY WARRANTY; without
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR

@@ -366,10 +366,17 @@ class CPU6502:
                 rd((hi << 8) | (t & 0xFF))
             return ((hi << 8) + t) & 0xFFFF
 
-        def abx_r(): return indexed(cpu.x, False)
-        def aby_r(): return indexed(cpu.y, False)
-        def abx_w(): return indexed(cpu.x, True)
-        def aby_w(): return indexed(cpu.y, True)
+        def abx_r():
+            return indexed(cpu.x, False)
+
+        def aby_r():
+            return indexed(cpu.y, False)
+
+        def abx_w():
+            return indexed(cpu.x, True)
+
+        def aby_w():
+            return indexed(cpu.y, True)
 
         def izx():
             p = rd(cpu.pc)
@@ -390,8 +397,11 @@ class CPU6502:
                 rd((hi << 8) | (t & 0xFF))
             return ((hi << 8) + t) & 0xFFFF
 
-        def izy_r(): return izy(False)
-        def izy_w(): return izy(True)
+        def izy_r():
+            return izy(False)
+
+        def izy_w():
+            return izy(True)
 
         # Instruction shapes.
         def R(mode, f):
@@ -422,25 +432,49 @@ class CPU6502:
         nz = cpu._nz
 
         # Read operations.
-        def LDA(v): cpu.a = nz(v)
-        def LDX(v): cpu.x = nz(v)
-        def LDY(v): cpu.y = nz(v)
-        def ORA(v): cpu.a = nz(cpu.a | v)
-        def AND(v): cpu.a = nz(cpu.a & v)
-        def EOR(v): cpu.a = nz(cpu.a ^ v)
-        def ADC(v): cpu._adc(v)
-        def SBC(v): cpu._sbc(v)
-        def CMP(v): cpu._cmp(cpu.a, v)
-        def CPX(v): cpu._cmp(cpu.x, v)
-        def CPY(v): cpu._cmp(cpu.y, v)
+        def LDA(v):
+            cpu.a = nz(v)
+
+        def LDX(v):
+            cpu.x = nz(v)
+
+        def LDY(v):
+            cpu.y = nz(v)
+
+        def ORA(v):
+            cpu.a = nz(cpu.a | v)
+
+        def AND(v):
+            cpu.a = nz(cpu.a & v)
+
+        def EOR(v):
+            cpu.a = nz(cpu.a ^ v)
+
+        def ADC(v):
+            cpu._adc(v)
+
+        def SBC(v):
+            cpu._sbc(v)
+
+        def CMP(v):
+            cpu._cmp(cpu.a, v)
+
+        def CPX(v):
+            cpu._cmp(cpu.x, v)
+
+        def CPY(v):
+            cpu._cmp(cpu.y, v)
 
         def BIT(v):
             cpu.Z = 1 if (cpu.a & v) == 0 else 0
             cpu.N = (v >> 7) & 1
             cpu.V = (v >> 6) & 1
 
-        def LAX(v): cpu.a = cpu.x = nz(v)
-        def NOPR(v): pass
+        def LAX(v):
+            cpu.a = cpu.x = nz(v)
+
+        def NOPR(v):
+            pass
 
         def ANC(v):
             cpu.a = nz(cpu.a & v)
@@ -476,7 +510,9 @@ class CPU6502:
             cpu.C = 1 if t >= 0 else 0
             cpu.x = nz(t)
 
-        def LXA(v): cpu.a = cpu.x = nz((cpu.a | cpu.MAGIC) & v)
+        def LXA(v):
+            cpu.a = cpu.x = nz((cpu.a | cpu.MAGIC) & v)
+
         def ANE(v):
             magic = cpu.ANE_RDY_MAGIC if cpu.resumed == cpu.cycles - 1 else cpu.ANE_MAGIC
             cpu.a = nz((cpu.a | magic) & cpu.x & v)
@@ -503,8 +539,11 @@ class CPU6502:
             cpu.C = v & 1
             return nz((v >> 1) | (c << 7))
 
-        def INC(v): return nz(v + 1)
-        def DEC(v): return nz(v - 1)
+        def INC(v):
+            return nz(v + 1)
+
+        def DEC(v):
+            return nz(v - 1)
 
         def SLO(v):
             cpu.C = v >> 7
@@ -703,9 +742,9 @@ class CPU6502:
             lo = rd(cpu.pc)
             hi = rd((cpu.pc + 1) & 0xFFFF)
             p = lo | (hi << 8)
-            l = rd(p)
-            h = rd((p & 0xFF00) | ((p + 1) & 0xFF))
-            cpu.pc = l | (h << 8)
+            lo = rd(p)
+            hi = rd((p & 0xFF00) | ((p + 1) & 0xFF))
+            cpu.pc = lo | (hi << 8)
 
         def BRK():
             if cpu.brk_stop:

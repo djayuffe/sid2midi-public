@@ -53,7 +53,7 @@ def convert_one(sid: Path, outdir: Path, seconds: float, timeout: float, all_son
     except subprocess.TimeoutExpired:
         return sid, "TIMEOUT", time.time() - start, "", ""
     elapsed = time.time() - start
-    warnings = "; ".join(l[len("warning: "):] for l in r.stderr.splitlines() if l.startswith("warning: "))
+    warnings = "; ".join(ln[len("warning: "):] for ln in r.stderr.splitlines() if ln.startswith("warning: "))
     if r.returncode == 2 and "Traceback" not in r.stderr:
         return sid, "REJECTED", elapsed, r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "", ""
     if r.returncode and "Traceback" in r.stderr:

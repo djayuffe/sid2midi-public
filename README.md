@@ -1,4 +1,4 @@
-# sid2midi 3.1.1 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
+# sid2midi 3.1.2 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
 
 A self-contained, dependency-free **SID → MIDI extraction toolkit**. `sid2midi.py`
 loads a PSID/RSID tune (or a Sidplayer MUS file), runs it on a cycle-exact C64
@@ -21,8 +21,11 @@ tests/                               regression tests (CPU, CIA vs Lorenz, reSID
 tools/testbench.py                   run the VICE test programs on the emulated C64
 tools/midicheck.py                   structural MIDI validator
 tools/validate_corpus.py             batch-convert and validate a SID collection
+tools/singlesteptests.py             check the CPU against the SingleStepTests 6502 vectors
 tools/cpu_opcode_coverage_report.py  opcode coverage report
+docs/                                architecture, accuracy, MIDI mapping, testing, development
 docs/audits/                         audit reports (3.1 current, 3.0/2.0, 1.x historical)
+ruff.toml                            lint configuration (optional, for development)
 validate_release.sh                  full validation incl. SHA256 manifest
 ```
 
@@ -148,6 +151,8 @@ Meta       track name, copyright, header text, "song start", "loop start"/"loop 
 ```
 
 Tracks: `meta, A V1-V3, [B V1-V3], [C V1-V3], Drums, Filter/Master A [B] [C]`.
+How notes, velocity, bends, drums and every CC are derived:
+[docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md).
 
 ## Validation
 
@@ -156,6 +161,7 @@ Tracks: `meta, A V1-V3, [B V1-V3], [C V1-V3], Drums, Filter/Master A [B] [C]`.
 python3 tools/validate_corpus.py ~/HVSC --seconds 60    # your own collection
 python3 tools/midicheck.py out/*.mid
 python3 tools/testbench.py testbench/x64-testlist.txt testprogs --json results.json
+python3 tools/singlesteptests.py 65x02/6502/v1         # CPU against SingleStepTests
 ```
 
 `tools/testbench.py` runs the exit-code programs of the VICE test repository
@@ -167,7 +173,9 @@ libresidfp's own tests; CPU decimal mode is checked against Bruce Clark's NMOS
 equations, and the CPU core was checked against the SingleStepTests 6502 v1
 vectors. The fast VIC-II model was checked cycle by cycle against the full chip
 (BA and interrupt edges).
-See `FINAL_CLOSURE_REPORT.md` for the results, including the tests that fail.
+See `FINAL_CLOSURE_REPORT.md` for the results and what was not tested,
+and [docs/TESTING.md](docs/TESTING.md) for obtaining the reference data and
+running each check.
 
 ## Accuracy boundary
 
@@ -186,8 +194,9 @@ audio. Known limits of the hardware model:
   editor, which return the stored nibble on the fast model.
 - **CIA:** no keyboard, joystick or IEC devices (inputs read as released/pulled
   up).
-- **SID:** digital part only; no audio. Remaining reference-data mismatches
-  are listed in `FINAL_CLOSURE_REPORT.md`.
+- **SID:** digital part only; no audio. Where the reference implementation and
+  real-chip data disagree, the data wins; real 6581s also differ from each
+  other in some noise writeback transitions (see `docs/ACCURACY.md`).
 - **Speed:** cycle exactness costs time; tunes that read OSC3/ENV3 clock the
   SID model every cycle, and programs that use sprite collisions or the light
   pen run the full VIC-II; both convert several times slower than real time.
@@ -208,13 +217,23 @@ are its load address. It is installed as libsidplayfp does: the MUS file at
 `$0900`, the player at `$E000` with its unused SID reads removed, init `$EC60`,
 play `$EC80`, timing by CIA #1. Stereo STR companions are not supported.
 
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | modules, emulated machine, timing, capture, drivers, Python API |
+| [docs/ACCURACY.md](docs/ACCURACY.md) | evidence per chip, every deviation from the references, known limits |
+| [docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md) | the MIDI output in detail |
+| [docs/TESTING.md](docs/TESTING.md) | unit tests, VICE test programs, SingleStepTests, corpus, debugging |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | conventions, making an accuracy change, release checklist |
+
 ## Audit history
 
 `docs/audits/SID2MIDI_3_1_0_AUDIT.md` covers the 3.1.0 reference ports and
-the 3.1.1 hardware-evidence fixes,
+the 3.1.1 and 3.1.2 hardware-evidence fixes,
 `docs/audits/SID2MIDI_3_0_0_AUDIT.md` the 3.0.0 accuracy work and
 `docs/audits/SID2MIDI_2_0_0_AUDIT.md` the 2.0.0 fixes; see
-`RELEASE_NOTES_v3.1.1.md`, `RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and
+`RELEASE_NOTES_v3.1.2.md`, `RELEASE_NOTES_v3.1.1.md`, `RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and
 `RELEASE_NOTES_v2.1.0.md`. The 1.x documents
 in `docs/audits/` are kept for history; several of their claims were found
 wrong in the 2.0.0 audit.
