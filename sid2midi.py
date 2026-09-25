@@ -54,7 +54,7 @@ from vicii_sc import VicIISC
 import residfp
 import mus
 
-VERSION = "3.1.3"
+VERSION = "3.1.4"
 
 PAL_CLOCK, NTSC_CLOCK = 985248.0, 1022727.0
 PAL_CPL, PAL_LINES = 63, 312
@@ -85,6 +85,9 @@ BASIC = _rom("basic.bin", 8192)
 CHARGEN = _rom("chargen.bin", 4096)
 
 
+_POWER_ON_RAM = bytearray()
+
+
 def power_on_ram(size=0x10000):
     """RAM as a C64 finds it at power-on: VICE's default C64 pattern (src/ram.c
     ``ram_init_with_pattern`` with the C64 factory values RAMInitValueOffset 2,
@@ -93,9 +96,13 @@ def power_on_ram(size=0x10000):
     inverted every 16 KB.  VICE also flips single bits with a 0.1% chance; that
     is left out so runs stay reproducible.  Programs that read memory they never
     wrote see this pattern (VICE testprogs C64/raminitpattern)."""
+    if size == 0x10000 and _POWER_ON_RAM:
+        return bytearray(_POWER_ON_RAM)                 # built once, copied per machine
     ram = bytearray(size)
     for off in range(size):
         ram[off] = (0xFF if (((off + 2) // 4) & 1) else 0x00) ^ (0xFF if ((off // 16384) & 1) else 0x00)
+    if size == 0x10000:
+        _POWER_ON_RAM.extend(ram)
     return ram
 
 
@@ -289,7 +296,7 @@ class MusTune(SidFile):
         self.warnings = []
         self.magic, self.version, self.rsid, self.basic = b"MUS ", 0, False, False
         self.mus = data
-        lines = mus.credits(data)
+        lines = mus.credit_lines(data)
         self.name = lines[0] if lines else os.path.basename(path)
         self.author = lines[1] if len(lines) > 1 else ""
         self.release = lines[2] if len(lines) > 2 else ""
@@ -1055,7 +1062,7 @@ class C64:
                 nxt = u
         for source in ("cia1", "vic"):                  # a low edge already scheduled ahead of t
             lo = self.low_since[source]
-            if lo is not None and lo >= t and self.high_since[source] <= lo and lo < nxt:
+            if lo is not None and t <= lo < nxt and self.high_since[source] <= lo:
                 nxt = lo
         self.next_line_event = nxt
         self.predict_dirty = False
@@ -1434,7 +1441,7 @@ class Trk:
     def meta(self, t, k, d):
         if isinstance(d, str):
             d = d.encode("latin1", "replace")
-        self._a(t, [0xFF, k] + list(vlq(len(d))) + list(d), 0)
+        self._a(t, [0xFF, k, *vlq(len(d)), *d], 0)
 
     def tempo(self, t, us):
         self.meta(t, 0x51, bytes([(us >> 16) & 255, (us >> 8) & 255, us & 255]))
@@ -1716,7 +1723,7 @@ def convert(sid, frames, fcyc, bpm, drum_voice=None, bend=True, do_cc=True, loop
                 sfreq = regs[7 * src] | regs[7 * src + 1] << 8
                 pfreq = sfreq if (sync and sfreq) else freq
                 hz = pfreq * sid.clock / ACC
-                tt = tick(cyc0 + (tcyc[v] if tcyc[v] >= 0 else 0))
+                tt = tick(cyc0 + max(tcyc[v], 0))
                 if do_cc:
                     for num, val in ((71, (regs[23] >> 4) * 8), (70, pw >> 5), (73, (ad >> 4) * 8), (75, (ad & 15) * 8),
                                      (79, (sr >> 4) * 8), (72, (sr & 15) * 8), (20, wave_code(wave) * 8),
@@ -1795,7 +1802,7 @@ def convert(sid, frames, fcyc, bpm, drum_voice=None, bend=True, do_cc=True, loop
         if do_cc:
             render_filter(flt, k)
         filter_tracks.append(flt)
-    return PPQ, [meta] + voice_tracks + [dtr] + filter_tracks
+    return PPQ, [meta, *voice_tracks, dtr, *filter_tracks]
 
 
 # --------------------------------------------------------------- driver --------

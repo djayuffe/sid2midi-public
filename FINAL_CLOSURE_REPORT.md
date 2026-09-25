@@ -1,4 +1,4 @@
-# sid2midi 3.1.3 — Validation Report
+# sid2midi 3.1.4 — Validation Report
 
 Date: 2026-09-25. Platform: macOS arm64, CPython 3.14.2 (unit tests also on
 CPython 3.9.6).
@@ -24,7 +24,10 @@ colour-RAM separation and the power-on RAM pattern
 (`tests/test_singlesteptests_tool.py`). Without the C64 ROM images (public
 source tree) 136 tests run, 13 of them skipped.
 
-Lint: `ruff check .` reports no findings (configuration in `ruff.toml`).
+Lint: `ruff check .` reports no findings. 3.1.4 widened the rule set
+(pycodestyle, pyflakes, bugbear, simplify, builtins, comprehensions,
+flake8-executable, refurb, ruff, blind-except, pylint W/E/C); every exception
+is listed in `ruff.toml` with its reason.
 
 ## 2. CPU against SingleStepTests
 
@@ -43,23 +46,24 @@ does).
 
 `tools/testbench.py` with VICE `testbench/x64-testlist.txt`: every exit-code
 test whose program is available (881 of the 1,066 listed). All of them were run
-on the final 3.1.3 code in one sweep. Machine: PAL breadbin C64 unless the test
+on the final 3.1.4 code in one sweep (70,709 s of emulation). Machine: PAL breadbin C64 unless the test
 options select NTSC (6567R8), old NTSC (6567R56A), new VIC-II (8565/8562), new
 CIA (6526A) or the 8580 SID; always the full VIC-II (`vicii_sc.py`).
 
-| Group | 3.1.2 | 3.1.3 |
-|-------|-------|-------|
-| general (incl. Lorenz 2.15) | 322 / 2 | 322 / 2 |
-| CIA | 188 / 0 | 188 / 0 |
-| SID | 167 / 0 | 167 / 0 |
-| CPU | 114 / 0 | 114 / 0 |
-| interrupts | 39 / 0 | 39 / 0 |
-| VIC-II | 37 / 0 | 37 / 0 |
-| C64 | 5 / 5 | 9 / 1 |
-| testbench self-test | 2 / 0 | 2 / 0 |
-| **Total** | **874 / 7** | **878 / 3** |
+| Group | 3.1.2 | 3.1.3 | 3.1.4 |
+|-------|-------|-------|-------|
+| general (incl. Lorenz 2.15) | 322 / 2 | 322 / 2 | 322 / 2 |
+| CIA | 188 / 0 | 188 / 0 | 188 / 0 |
+| SID | 167 / 0 | 167 / 0 | 167 / 0 |
+| CPU | 114 / 0 | 114 / 0 | 114 / 0 |
+| interrupts | 39 / 0 | 39 / 0 | 39 / 0 |
+| VIC-II | 37 / 0 | 37 / 0 | 37 / 0 |
+| C64 | 5 / 5 | 9 / 1 | 9 / 1 |
+| testbench self-test | 2 / 0 | 2 / 0 | 2 / 0 |
+| **Total** | **874 / 7** | **878 / 3** | **878 / 3** |
 
-Fixed in 3.1.3: `C64/bankio/bankio` (colour RAM and the SID bus value) and
+3.1.4 is a clean-up release: its results are identical to 3.1.3, which fixed
+`C64/bankio/bankio` (colour RAM and the SID bus value) and
 `C64/raminitpattern/cyberloadtest`, `darkstarbbstest`, `platoontest` (power-on
 RAM pattern). Evidence: `RELEASE_NOTES_v3.1.3.md` and `docs/ACCURACY.md`.
 
@@ -79,33 +83,29 @@ disk, cartridge, G64 or P64 images (62).
 ## 4. Real-world corpus
 
 The 33 PSID/RSID files of the earlier reports, `tools/validate_corpus.py
---seconds 180 --timeout 3600`, final 3.1.3 code against a fresh 3.1.2 run; every
+--seconds 180 --timeout 3600`, final 3.1.4 code against the 3.1.3 run; every
 MIDI checked by `tools/midicheck.py`.
 
-| Result  | 3.0.0 | 3.1.0 | 3.1.1 | 3.1.2 | 3.1.3 |
-|---------|-------|-------|-------|-------|-------|
-| OK      | 25    | 25    | 25    | 25    | 25    |
-| SILENT  | 8     | 8     | 8     | 8     | 8     |
-| INVALID | 0     | 0     | 0     | 0     | 0     |
-| CRASH   | 0     | 0     | 0     | 0     | 0     |
-| TIMEOUT | 0     | 0     | 0     | 0     | 0     |
+| Result  | 3.0.0 | 3.1.0 | 3.1.1 | 3.1.2 | 3.1.3 | 3.1.4 |
+|---------|-------|-------|-------|-------|-------|-------|
+| OK      | 25    | 25    | 25    | 25    | 25    | 25    |
+| SILENT  | 8     | 8     | 8     | 8     | 8     | 8     |
+| INVALID | 0     | 0     | 0     | 0     | 0     | 0     |
+| CRASH   | 0     | 0     | 0     | 0     | 0     | 0     |
+| TIMEOUT | 0     | 0     | 0     | 0     | 0     | 0     |
 
-32 of the 33 files keep their status and note count; 29 MIDI files are
-byte-identical to 3.1.2. The four that differ are caused by the colour-RAM fix,
-confirmed by rerunning `quake.sid` with each 3.1.3 change reverted in turn
-(reverting the RAM pattern or the bus-value rule still gives the new result):
-
-- `quake.sid`: 656 → 647 notes. The player copies the whole I/O area into its
-  data; colour RAM is now its own memory, so the copied bytes are the ones a
-  real C64 returns (`C64/bankio`).
-- three `midi_import*.sid`: defective files (data past `$FFFF`, every player
-  call ends on BRK) that produce no notes; their meta/controller bytes differ.
+All 33 files keep their status and note count, and all 33 MIDI files are
+byte-identical to the 3.1.3 run apart from the version string: the clean-up
+changed no output. (3.1.3 itself changed `quake.sid` from 656 to 647 notes
+through the colour-RAM fix; see that release's notes.)
 
 ## 5. Conversion speed
 
 `Arkanoid.sid`, 30 s of C64 time, CPU time of two alternating runs each:
-3.1.2 17.4 s and 17.2 s, 3.1.3 17.3 s and 17.2 s (the machine was not fully
-idle, so only the comparison is meaningful). Tunes that read colour RAM or
+3.1.3 16.8 s and 16.7 s, 3.1.4 16.7 s and 16.7 s (the machine was not fully
+idle, so only the comparison is meaningful). Creating a `C64` object is 24x
+cheaper in 3.1.4 (7.2 ms to 0.3 ms) because the power-on RAM pattern is built
+once and copied; that shows up in the test harness rather than in conversions. Tunes that read colour RAM or
 unmapped I/O from their own code, or use sprite collisions or the light pen, run
 the full VIC-II (about 3.8 µs per emulated cycle for the VIC-II alone) and
 convert several times slower.

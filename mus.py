@@ -21,7 +21,7 @@ HLT_CMD = 0x014F
 PLAYER1_INIT, PLAYER1_PLAY = 0xEC60, 0xEC80
 # LDA $D41B / STA abs / LDA $D41C / STA abs: SID reads whose results the player
 # never uses; libsidplayfp replaces these 12 bytes with NOPs.
-_USELESS_READS = re.compile(rb"\xAD\x1B\xD4\x8D..\xAD\x1C\xD4\x8D..", re.S)
+_USELESS_READS = re.compile(rb"\xAD\x1B\xD4\x8D..\xAD\x1C\xD4\x8D..", re.DOTALL)
 _DATA_PTR_LO, _DATA_PTR_HI = 0xC6E, 0xC70
 
 
@@ -55,7 +55,7 @@ def _petscii(b):
     return " " if b == 0x0D else ""
 
 
-def credits(buf):
+def credit_lines(buf):
     i = voice3_index(buf)
     lines = []
     if i is None:

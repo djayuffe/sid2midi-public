@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import sid2midi as S  # noqa: E402
-from vicii_sc import VicIISC  # noqa: E402
+import sid2midi as S
+from vicii_sc import VicIISC
 
 
 def machine():

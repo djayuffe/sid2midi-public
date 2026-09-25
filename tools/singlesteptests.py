@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cpu6502 import CPU6502  # noqa: E402
+from cpu6502 import CPU6502
 
 
 class Bus:
@@ -48,7 +48,7 @@ class Bus:
 def ane_needs_magic_ee(test):
     """The vector's expected A is ANE with magic $EE, and $EF would give another value."""
     ini = test["initial"]
-    ram = {a: v for a, v in ini["ram"]}
+    ram = dict(ini["ram"])
     imm = ram.get((ini["pc"] + 1) & 0xFFFF, 0)
     ee = (ini["a"] | 0xEE) & ini["x"] & imm
     ef = (ini["a"] | 0xEF) & ini["x"] & imm

@@ -49,7 +49,7 @@ def convert_one(sid: Path, outdir: Path, seconds: float, timeout: float, all_son
         cmd.append("--all-songs")
     start = time.time()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, check=False, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return sid, "TIMEOUT", time.time() - start, "", ""
     elapsed = time.time() - start

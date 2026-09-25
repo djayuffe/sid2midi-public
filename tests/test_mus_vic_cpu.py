@@ -6,10 +6,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import mus  # noqa: E402
-import vicii_sc  # noqa: E402
-from cia_vice import Cia6526  # noqa: E402
-from cpu6502 import CPU6502  # noqa: E402
+import mus
+import vicii_sc
+from cia_vice import Cia6526
+from cpu6502 import CPU6502
 
 
 def mus_file(voices=(b"\x01\x4F", b"\x01\x4F", b"\x01\x4F"), text=b"HELLO\rWORLD\0"):
@@ -21,7 +21,7 @@ class MusDetectionTests(unittest.TestCase):
     def test_voice3_index_and_credits(self):
         data = mus_file((b"\x12\x34\x01\x4F", b"\x01\x4F", b"\x00\x00\x01\x4F"))
         self.assertEqual(mus.voice3_index(data), 8 + 4 + 2 + 4)
-        self.assertEqual(mus.credits(data), ["HELLO", "WORLD"])
+        self.assertEqual(mus.credit_lines(data), ["HELLO", "WORLD"])
 
     def test_rejects_non_mus(self):
         self.assertIsNone(mus.voice3_index(b"PSID" + bytes(120)))

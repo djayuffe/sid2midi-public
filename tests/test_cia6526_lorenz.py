@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cia_vice import Cia6526  # noqa: E402
+from cia_vice import Cia6526
 
 SUB100 = [5, 5, 5, 3, 1, 5, 4, 3, 2, 1]
 SPEC100 = [0x71, 0x62, 0x53, 0x52, 0x51, 0x31, 0x23, 0x22, 0x21, 0x13, 0x12, 0x11, 0x03, 0x02, 0x01, 0x00]

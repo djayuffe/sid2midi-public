@@ -102,9 +102,16 @@ def check_smf(data: bytes) -> dict:
     return stats
 
 
+USAGE = "usage: midicheck.py FILE.mid [FILE.mid ...]"
+
+
 def main(argv=None) -> int:
+    paths = list(argv if argv is not None else sys.argv[1:])
+    if not paths or paths[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0 if paths else 2
     rc = 0
-    for path in (argv if argv is not None else sys.argv[1:]):
+    for path in paths:
         try:
             with open(path, "rb") as fh:
                 s = check_smf(fh.read())

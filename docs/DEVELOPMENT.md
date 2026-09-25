@@ -9,7 +9,11 @@ change and how a release is put together. Background:
 - Python 3.9 or newer; no third-party packages at run time. Keep the code
   3.9-compatible (no `match`, no `X | Y` type unions, no 3.10+ library calls).
 - Optional: [ruff](https://docs.astral.sh/ruff/) for linting
-  (`ruff check .`, configured in `ruff.toml`).
+  (`ruff check .`, configured in `ruff.toml`). The selected rule set is wide
+  (pycodestyle, pyflakes, bugbear, simplify, builtins, comprehensions,
+  flake8-executable, refurb, ruff, blind-except, pylint W/E/C); every exception
+  is listed in `ruff.toml` with its reason. The tree passes it with no
+  findings.
 
 ## Conventions
 
@@ -25,7 +29,7 @@ change and how a release is put together. Background:
 - **No claims without runs.** Documentation states measured results only: test
   counts, corpus results and speed come from runs on the released code.
 - **Style.** One statement per line; `%` formatting as used throughout; lines
-  up to 120 columns; comments explain *why*, not *what*.
+  up to 120 columns; comments explain *why*, not *what*; no type annotations.
 - **Speed matters in three places.** The CPU step (`cpu6502.py` builds one
   closure per opcode), `VicIISC.cycle` and the reSIDfp clock run millions of
   times per conversion. Keep attribute lookups and allocations out of them, and

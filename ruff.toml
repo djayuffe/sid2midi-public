@@ -4,9 +4,16 @@ line-length = 120
 target-version = "py39"
 
 [lint]
-select = ["E", "F", "W", "B", "SIM"]
+select = ["E", "F", "W", "B", "SIM", "A", "C4", "EXE", "FURB", "RUF", "BLE", "PLW", "PLE", "PLC"]
 ignore = [
     "SIM108",   # if/else blocks are kept where they mirror the reference code
+    "RUF023",   # __slots__ keep the field order of the reference implementations
+    "PLC0415",  # imports inside functions keep optional/heavy imports lazy
+    "PLW2901",  # loop variables are rebound deliberately in the emulation code
+    "RUF005",   # list concatenation is clearer than unpacking in the MIDI writer
+    "PLW0603",  # module-level caches (cold-start state) are written from functions
+    "C408",     # mus.py's opcode table reads better as dict(zp=0x85, ...) than quoted keys
+    "RUF012",   # the code carries no type annotations, so no ClassVar markers
 ]
 
 [lint.per-file-ignores]

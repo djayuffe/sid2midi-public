@@ -566,7 +566,7 @@ class ExampleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             out = os.path.join(d, "example.mid")
             r = subprocess.run([sys.executable, str(ROOT / "sid2midi.py"), str(ROOT / "examples" / "simple_pulse.sid"),
-                                "--seconds", "1", "--report", "-o", out], capture_output=True, text=True)
+                                "--seconds", "1", "--report", "-o", out], capture_output=True, check=False, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertGreaterEqual(check_smf(Path(out).read_bytes())["notes"], 1)
 

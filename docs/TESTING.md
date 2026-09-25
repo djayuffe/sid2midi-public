@@ -39,6 +39,9 @@ python3 -m unittest discover -s tests -p test_residfp.py    # one file
 
 Without `roms/*.bin`, 13 tests are skipped.
 
+The tools carry a `#!` line and are executable, so `tools/testbench.py ...`
+works as well as `python3 tools/testbench.py ...`.
+
 ## VICE test programs
 
 The VICE project maintains hundreds of C64 test programs, many with reference
@@ -60,6 +63,10 @@ python3 tools/testbench.py testprogs/testbench/x64-testlist.txt testprogs \
 
 - A program **passes** when it writes `$00` to `$D7FF`, **fails** on any other
   value and **times out** at the cycle limit from the list.
+- The list holds 1,066 exit-code tests. 881 of them can run here; the rest need
+  hardware sid2midi does not emulate (REU, disk drives, memory expansions) or
+  mount disk or cartridge images. Current result: 878 pass, 3 fail (see
+  [ACCURACY.md](ACCURACY.md)).
 - Machine per test: PAL breadbin with 6526 CIAs and a 6581, changed by the test
   options: `cia-new` → 6526A, `sid-new` → 8580, `vicii-ntsc` → 6567R8,
   `vicii-ntscold` → 6567R56A, `vicii-new` → 8565 (PAL) / 8562 (NTSC).
