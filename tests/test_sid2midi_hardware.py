@@ -416,8 +416,10 @@ class ReadbackTests(TempDir):
     def test_bus_value_decays(self):
         c = S.C64()
         c.write(0xD400, 0x5A)
-        self.assertEqual(c.read(0xD400), 0x5A)              # a write-only read also halves the lifetime
+        self.assertEqual(c.read(0xD400), 0x5A)
         c.begin_frame(S.residfp.BUS_TTL_6581 // 2)
+        self.assertEqual(c.read(0xD400), 0x5A)              # reads do not shorten the lifetime (reSID)
+        c.begin_frame(S.residfp.BUS_TTL_6581 + 1)
         self.assertEqual(c.read(0xD400), 0)
         self.assertEqual(c.read(0xD419), 0xFF)
 
@@ -443,8 +445,6 @@ class ReadbackTests(TempDir):
                     ref._t = t
                     if r in (0x19, 0x1A):
                         ref.busValue, ref.busValueTtl = 0xFF, ref.modelTTL
-                    else:
-                        ref.busValueTtl = int(ref.busValueTtl / 2)
                     self.assertEqual(c.read(0xD400 + r), ref.busValue, (model, t, hex(r)))
             self.assertIsNone(c.chips[0].fp)                    # no OSC3/ENV3 read: no full chip
 
@@ -452,7 +452,7 @@ class ReadbackTests(TempDir):
         c = S.C64()
         c.write(0xD400, 0x5A)
         c.begin_frame(100)
-        self.assertEqual(c.read(0xD404), 0x5A)                  # halves the lifetime
+        self.assertEqual(c.read(0xD404), 0x5A)
         c.begin_frame(200)
         c.read(0xD41B)                                           # builds the reSIDfp chip
         fp = c.chips[0].fp

@@ -80,7 +80,7 @@ class MemoryMapTests(unittest.TestCase):
         c.ram[0x01] = 0x37
         c.ram[0xC123] = 0x5A
         self.assertEqual(c.read(0xC123), 0x5A)          # 1.x: IndexError
-        self.assertEqual(c.read(0xCFFF), 0)
+        self.assertEqual(c.read(0xCFFF), c.ram[0xCFFF])  # RAM, with its power-on pattern
 
     def test_pla_banking(self):
         c = S.C64()
@@ -101,7 +101,24 @@ class MemoryMapTests(unittest.TestCase):
         c.write(0xD418, 0x0F)
         self.assertEqual(c.chips[0].reg[0x18], 0x0F)
         c.ram[0x01] = 0x34
-        self.assertEqual(c.read(0xD418), 0)
+        self.assertEqual(c.read(0xD418), c.ram[0xD418])  # RAM under I/O, untouched by the SID write
+        self.assertNotEqual(c.ram[0xD418], 0x0F)
+
+    def test_colour_ram_is_not_the_ram_under_the_io_area(self):
+        c = S.C64()                                      # VICE testprogs C64/bankio
+        c.ram[0x01] = 0x37
+        c.write(0xD800, 0x0A)                            # colour RAM (4 bits)
+        c.ram[0x01] = 0x34                               # I/O banked out
+        c.write(0xD800, 0x55)                            # goes to RAM under the I/O area
+        self.assertEqual(c.ram[0xD800], 0x55)
+        c.ram[0x01] = 0x37
+        self.assertEqual(c.read(0xD800) & 0x0F, 0x0A)    # colour RAM kept its own value
+
+    def test_power_on_ram_pattern(self):
+        ram = S.power_on_ram()                           # VICE testprogs C64/raminitpattern
+        self.assertEqual(list(ram[:14]), [0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255])
+        self.assertEqual(ram[0x4000], 0xFF ^ ram[0x0000])   # pattern inverts every 16 KB
+        self.assertEqual(len(ram), 0x10000)
 
     def test_sid_mirrors_and_extra_sid_mapping(self):
         c = S.C64()

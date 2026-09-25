@@ -3,7 +3,7 @@
 Runtime:
 
 ```text
-Python 3.9 or newer (3.1.2 test suite verified on CPython 3.9.6 and 3.14.2, macOS arm64)
+Python 3.9 or newer (3.1.3 test suite verified on CPython 3.9.6 and 3.14.2, macOS arm64)
 No third-party Python packages
 bash, plus sha256sum or shasum, for validate_release.sh
 ```

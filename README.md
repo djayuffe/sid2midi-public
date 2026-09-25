@@ -1,4 +1,4 @@
-# sid2midi 3.1.2 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
+# sid2midi 3.1.3 — PSID/RSID/MUS → MIDI on a cycle-exact emulated C64
 
 A self-contained, dependency-free **SID → MIDI extraction toolkit**. `sid2midi.py`
 loads a PSID/RSID tune (or a Sidplayer MUS file), runs it on a cycle-exact C64
@@ -230,10 +230,10 @@ play `$EC80`, timing by CIA #1. Stereo STR companions are not supported.
 ## Audit history
 
 `docs/audits/SID2MIDI_3_1_0_AUDIT.md` covers the 3.1.0 reference ports and
-the 3.1.1 and 3.1.2 hardware-evidence fixes,
+the 3.1.1, 3.1.2 and 3.1.3 hardware-evidence fixes,
 `docs/audits/SID2MIDI_3_0_0_AUDIT.md` the 3.0.0 accuracy work and
 `docs/audits/SID2MIDI_2_0_0_AUDIT.md` the 2.0.0 fixes; see
-`RELEASE_NOTES_v3.1.2.md`, `RELEASE_NOTES_v3.1.1.md`, `RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and
+`RELEASE_NOTES_v3.1.3.md`, `RELEASE_NOTES_v3.1.2.md`, `RELEASE_NOTES_v3.1.1.md`, `RELEASE_NOTES_v3.1.0.md`, `RELEASE_NOTES_v3.0.0.md` and
 `RELEASE_NOTES_v2.1.0.md`. The 1.x documents
 in `docs/audits/` are kept for history; several of their claims were found
 wrong in the 2.0.0 audit.

@@ -1,6 +1,6 @@
-# sid2midi 3.1.2 — Validation Report
+# sid2midi 3.1.3 — Validation Report
 
-Date: 2026-09-16. Platform: macOS arm64, CPython 3.14.2 (unit tests also on
+Date: 2026-09-25. Platform: macOS arm64, CPython 3.14.2 (unit tests also on
 CPython 3.9.6).
 
 ## 1. Release validation
@@ -11,27 +11,27 @@ CPython 3.9.6).
   SHA256 manifest, release file layout
 ```
 
-Unit tests: 134 pass on CPython 3.14.2 and on 3.9.6. They include all 41,664
+Unit tests: 136 pass on CPython 3.14.2 and on 3.9.6. They include all 41,664
 register-access cases of Lorenz `cia1ta`/`cia1tb` (`tests/test_cia6526_lorenz.py`,
 against `cia_vice.py`), libresidfp's own unit tests (`tests/test_residfp.py`),
 the MUS loader, VIC-II cycle tables, fast-vs-full VIC-II register read-back,
 CIA port B, RDY-dependent CPU rules and the VSP idle fetch
 (`tests/test_mus_vic_cpu.py`), fast-path open-bus reads
-(`tests/test_fast_vic_open_bus.py`), the SID writeback rules
-(`tests/test_sid_writeback_rules.py`) and the SingleStepTests harness
+(`tests/test_fast_vic_open_bus.py`), the SID writeback and bus-value rules
+(`tests/test_sid_writeback_rules.py`, `tests/test_sid2midi_hardware.py`),
+colour-RAM separation and the power-on RAM pattern
+(`tests/test_sid2midi_release.py`) and the SingleStepTests harness
 (`tests/test_singlesteptests_tool.py`). Without the C64 ROM images (public
-source tree) 134 tests run, 13 of them skipped.
+source tree) 136 tests run, 13 of them skipped.
 
 Lint: `ruff check .` reports no findings (configuration in `ruff.toml`).
 
 ## 2. CPU against SingleStepTests
 
-`tools/singlesteptests.py` (new in 3.1.2) on the final CPU code: all 256
-opcodes, 2,560,000 vectors, compared cycle by cycle (address, value,
-read/write) and by final registers and memory.
+`cpu6502.py` is unchanged since 3.1.2, whose run of `tools/singlesteptests.py`
+covered all 256 opcodes and 2,560,000 vectors cycle by cycle:
 
 ```text
-$8B: 10000 vectors, 8722 pass, 1278 known, 0 FAIL
 summary: 256 opcodes, 2560000 vectors, 2558722 pass, 1278 known (ANE magic $EE), 0 fail
 ```
 
@@ -42,47 +42,35 @@ does).
 ## 3. Test programs on the emulated machine
 
 `tools/testbench.py` with VICE `testbench/x64-testlist.txt`: every exit-code
-test whose program was available. Machine: PAL breadbin C64 unless the test
+test whose program is available (881 of the 1,066 listed). All of them were run
+on the final 3.1.3 code in one sweep. Machine: PAL breadbin C64 unless the test
 options select NTSC (6567R8), old NTSC (6567R56A), new VIC-II (8565/8562), new
 CIA (6526A) or the 8580 SID; always the full VIC-II (`vicii_sc.py`).
 
-Every one of these programs was run on the final 3.1.2 code, in one sweep of
-the whole test list (`summary: PASS 855`), not only the groups whose code
-changed.
+| Group | 3.1.2 | 3.1.3 |
+|-------|-------|-------|
+| general (incl. Lorenz 2.15) | 322 / 2 | 322 / 2 |
+| CIA | 188 / 0 | 188 / 0 |
+| SID | 167 / 0 | 167 / 0 |
+| CPU | 114 / 0 | 114 / 0 |
+| interrupts | 39 / 0 | 39 / 0 |
+| VIC-II | 37 / 0 | 37 / 0 |
+| C64 | 5 / 5 | 9 / 1 |
+| testbench self-test | 2 / 0 | 2 / 0 |
+| **Total** | **874 / 7** | **878 / 3** |
 
-| Group | 3.1.0 | 3.1.1 | 3.1.2 |
-|-------|-------|-------|-------|
-| Lorenz 2.15 | 314 / 0 | 314 / 0 | 314 / 0 |
-| CIA | 184 / 0 | 184 / 0 | 184 / 0 |
-| CPU | 114 / 0 | 114 / 0 | 114 / 0 |
-| interrupts | 39 / 0 | 39 / 0 | 39 / 0 |
-| VIC-II | 34 / 3 | 37 / 0 | 37 / 0 |
-| SID | 161 / 6 | 164 / 3 | 167 / 0 |
-| **Total** | **846 / 9** | **852 / 3** | **855 / 0** |
+Fixed in 3.1.3: `C64/bankio/bankio` (colour RAM and the SID bus value) and
+`C64/raminitpattern/cyberloadtest`, `darkstarbbstest`, `platoontest` (power-on
+RAM pattern). Evidence: `RELEASE_NOTES_v3.1.3.md` and `docs/ACCURACY.md`.
 
-No failures, no timeouts, no crashes among these 855 programs. The three
-programs 3.1.1 still failed —
-`SID/wb_testsuite/noise_writeback_check_D_to_E_old` and `SID/noiselfsrinit`
-`simple` and `scan` on the 6581 — pass in 3.1.2; see `RELEASE_NOTES_v3.1.2.md`
-and the audit for the evidence behind the two rules.
+The three remaining failures need hardware sid2midi does not emulate, as their
+own readmes state:
 
-### Programs obtained for this release
-
-The 26 exit-code programs that earlier runs had not downloaded were fetched and
-run, raising the runnable set from 855 to 881. 19 pass; 7 fail and are new,
-honestly open gaps rather than regressions:
-
-| Program(s) | Result | Cause |
-|------------|--------|-------|
-| `C64/raminitpattern/cyberloadtest`, `darkstarbbstest`, `platoontest` | fail | sid2midi fills RAM with `$00` at power-on and emulates no RAM initialisation pattern; `typicaltest` of the same group passes |
-| `C64/autostart/defaults/test` | fail | expects to be autostarted from a disk image under the name `TEST`; the testbench loads and runs the PRG directly |
-| `C64/bankio/bankio` | fail | not diagnosed |
-| `general/fuxxortest/test-fuxxored` | timeout | not diagnosed |
-| `general/fuxxortest/ef2-inst1` | fail | not diagnosed; the other seven programs of the group pass |
-
-The four 6526A shift-register programs (`CIA/shiftregister/*-new`), both
-testbench self-tests, the BASIC autostart programs, `C64/openio/gauntlet`,
-`general/banking00` and `general/ram0001/test1` are among the 19 that pass.
+| Test | Reason |
+|------|--------|
+| `general/fuxxortest/ef2-inst1` | "fails without true drive emulation" (1541) |
+| `general/fuxxortest/test-fuxxored` | bundles that drive test; times out when it fails |
+| `C64/autostart/defaults/test` | "must be loaded from disk using LOAD"TEST",8 - else it will fail" |
 
 Not run (185): programs for hardware sid2midi does not emulate (REU 87, disk
 drive 24, memory expansions 6, GEO-RAM 3, +60K/+256K 3) and tests that mount
@@ -91,10 +79,10 @@ disk, cartridge, G64 or P64 images (62).
 ## 4. Real-world corpus
 
 The 33 PSID/RSID files of the earlier reports, `tools/validate_corpus.py
---seconds 180 --timeout 3600`, final 3.1.2 code; every MIDI checked by
-`tools/midicheck.py`.
+--seconds 180 --timeout 3600`, final 3.1.3 code against a fresh 3.1.2 run; every
+MIDI checked by `tools/midicheck.py`.
 
-| Result  | 2.1.0 | 3.0.0 | 3.1.0 | 3.1.1 | 3.1.2 |
+| Result  | 3.0.0 | 3.1.0 | 3.1.1 | 3.1.2 | 3.1.3 |
 |---------|-------|-------|-------|-------|-------|
 | OK      | 25    | 25    | 25    | 25    | 25    |
 | SILENT  | 8     | 8     | 8     | 8     | 8     |
@@ -102,18 +90,25 @@ The 33 PSID/RSID files of the earlier reports, `tools/validate_corpus.py
 | CRASH   | 0     | 0     | 0     | 0     | 0     |
 | TIMEOUT | 0     | 0     | 0     | 0     | 0     |
 
-All 33 MIDI files are byte-identical to the 3.1.1 run apart from the version
-string in the meta track, which is what the code clean-up had to achieve. The 8
-silent files are the defective inputs identified in earlier reports.
+32 of the 33 files keep their status and note count; 29 MIDI files are
+byte-identical to 3.1.2. The four that differ are caused by the colour-RAM fix,
+confirmed by rerunning `quake.sid` with each 3.1.3 change reverted in turn
+(reverting the RAM pattern or the bus-value rule still gives the new result):
+
+- `quake.sid`: 656 → 647 notes. The player copies the whole I/O area into its
+  data; colour RAM is now its own memory, so the copied bytes are the ones a
+  real C64 returns (`C64/bankio`).
+- three `midi_import*.sid`: defective files (data past `$FFFF`, every player
+  call ends on BRK) that produce no notes; their meta/controller bytes differ.
 
 ## 5. Conversion speed
 
-`Arkanoid.sid`, 30 s of C64 time, idle machine, CPU time of two alternating runs
-each: 3.1.1 16.4 s and 16.4 s, 3.1.2 16.4 s and 16.5 s. The MIDI files are
-identical apart from the version string. Tunes that read colour RAM or unmapped
-I/O from their own code, or use sprite collisions or the light pen, run the full
-VIC-II (about 3.8 µs per emulated cycle for the VIC-II alone) and convert
-several times slower.
+`Arkanoid.sid`, 30 s of C64 time, CPU time of two alternating runs each:
+3.1.2 17.4 s and 17.2 s, 3.1.3 17.3 s and 17.2 s (the machine was not fully
+idle, so only the comparison is meaningful). Tunes that read colour RAM or
+unmapped I/O from their own code, or use sprite collisions or the light pen, run
+the full VIC-II (about 3.8 µs per emulated cycle for the VIC-II alone) and
+convert several times slower.
 
 ## 6. Scope boundary
 

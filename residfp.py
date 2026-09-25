@@ -689,8 +689,11 @@ class SID:
         elif offset == 0x1C:
             self.busValue = self.env[2].readENV()
             self.busValueTtl = self.modelTTL
-        else:
-            self.busValueTtl = int(self.busValueTtl / 2)
+        # reSID leaves the bus value and its lifetime alone when a write-only
+        # register is read; libresidfp halves the lifetime, which makes the
+        # value decay after a few reads.  The C64 keeps it: VICE testprogs
+        # C64/bankio reads the SID pages repeatedly and its real-hardware table
+        # still expects the last written value (VICE, using reSID, passes).
         return self.busValue
 
     def write(self, offset, value):

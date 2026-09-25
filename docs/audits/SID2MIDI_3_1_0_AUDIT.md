@@ -199,15 +199,33 @@ removed, lambdas and a loop closure turned into functions, a `ruff.toml` lint
 configuration; the SingleStepTests harness is now shipped as
 `tools/singlesteptests.py`.
 
+## Changes in 3.1.3
+
+Running the 26 programs that 3.1.2 added turned up three machine-level bugs,
+all found by `C64/bankio` and `C64/raminitpattern`, whose reference data comes
+from real machines:
+
+- **Colour RAM was the RAM under the I/O area.** Both used `ram[$D800..]`, so a
+  write while I/O was banked out changed what colour RAM read back. They are now
+  separate, as on the C64. This is the one change in 3.1.3 that moves a
+  conversion: `quake.sid` copies the I/O area into its data (656 → 647 notes).
+- **The SID bus value decayed too fast.** libresidfp halves the remaining
+  lifetime whenever a write-only register is read; reSID and the C64 leave it
+  alone, and `bankio` reads the SID pages repeatedly before checking the value.
+- **RAM started as zeros.** It now holds VICE's default C64 power-on pattern
+  (`src/ram.c` factory values), without VICE's 0.1% random bit flips, so runs
+  stay reproducible.
+
+Result: 878 of 881 available programs pass. The three failures need a 1541
+drive or disk autostart, which sid2midi does not emulate.
+
 ## Known gaps
 
 See `FINAL_CLOSURE_REPORT.md` for the results.
 
-Of the programs available to the earlier runs, none fails in 3.1.2: 855 of 855,
-all rerun on the final code in one sweep of the whole test list. The 26
-programs that had never been downloaded were then fetched: 19 pass, 7 fail
-(power-on RAM pattern, disk autostart, and three undiagnosed); the validation
-report lists them. Remaining limits are listed in `docs/ACCURACY.md`: real
+3.1.3 passes 878 of the 881 available programs, all run on the final code; the
+three failures need hardware sid2midi does not emulate (see the validation
+report). Remaining limits are listed in `docs/ACCURACY.md`: real
 6581 chips differ from each other in some noise writeback transitions (sid2midi
 follows chip 2783, which the tests were built from), and the NTSC 6567 VSP
 idle-fetch address is not measured.

@@ -300,7 +300,7 @@ class VicIISC:
             self.cbuf[self.vmli] = self.m.ram[self.m.cpu.pc & 0xFFFF] & 0xF
         else:
             self.vbuf[self.vmli] = self._fetch(((self.regs[0x18] & 0xF0) << 6) + self.vc)
-            self.cbuf[self.vmli] = self.m.ram[0xD800 + self.vc] & 0xF
+            self.cbuf[self.vmli] = self.m.color[self.vc & 0x3FF] & 0xF
 
     def _fetch_graphics(self):
         if self.color_latency:

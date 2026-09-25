@@ -1,4 +1,4 @@
-# Project Manifest — sid2midi 3.1.2
+# Project Manifest — sid2midi 3.1.3
 
 ```text
 README.md                               overview, options, mapping, accuracy boundary
@@ -6,14 +6,15 @@ QUICKSTART.md                           first commands
 REQUIREMENTS.md                         runtime requirements
 LICENSE.md                              licence (GPL-2.0-or-later) and third-party material
 COPYING                                 GNU General Public License, version 2
-RELEASE_NOTES_v3.1.2.md                 changes in this release
+RELEASE_NOTES_v3.1.3.md                 changes in this release
+RELEASE_NOTES_v3.1.2.md                 changes in 3.1.2
 RELEASE_NOTES_v3.1.1.md                 changes in 3.1.1
 RELEASE_NOTES_v3.1.0.md                 changes in 3.1.0
 RELEASE_NOTES_v3.0.0.md                 changes in 3.0.0
 RELEASE_NOTES_v2.1.0.md                 changes in 2.1.0
 RELEASE_NOTES_v2.0.0.md                 changes in 2.0.0
 RELEASE_NOTES_NMOS_CPU.md               1.x release notes (history)
-FINAL_CLOSURE_REPORT.md                 3.1.2 validation report
+FINAL_CLOSURE_REPORT.md                 3.1.3 validation report
 PROJECT_MANIFEST.md                     this file
 SHA256SUMS.txt                          integrity manifest
 ruff.toml                               lint configuration (development only)

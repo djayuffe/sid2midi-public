@@ -108,6 +108,7 @@ disagree. The test suite includes sampling logs of two 6581 chips (2586 and
 | `$C → $9`/`$E`/`$F` write back; `$C → $F` writes back the new waveform's output | 8580 | measured | `wb_testsuite C_to_x_new` |
 | Noise+pulse output from reSID's `noise_pulse8580()` instead of the pulldown table | 8580 | port (reSID) | VICE `src/resid/wave.h`; `wb_testsuite C_to_9_new`/`C_to_E_new`, `wf12nsr-8580` |
 | OSC3 read of noise+pulse pulls one more bit low than the written-back value | 8580 | measured | `SID/wf12nsr-8580` (two reads) |
+| Reading a write-only register returns the bus value and leaves its lifetime alone (reSID), instead of libresidfp's halving | both | measured | `C64/bankio` reads the SID pages repeatedly and its real-hardware table still expects the last written value; VICE, using reSID, passes |
 
 The 6581 rules for `$D → $C`, `$E → $C` and `$D → $E` follow chip 2783, the
 chip the tests were built from; chip 2586 behaves differently, so real 6581s
@@ -127,7 +128,8 @@ whenever the tune can observe it.
 | PSID `$01` banking per call | PSID specification | v2NG load-range aware |
 | RSID/BASIC cold start | exact with ROMs | real KERNAL/BASIC cold start; without the ROM images a minimal environment is used and a warning is printed |
 | Keyboard, joysticks, paddles, IEC bus, cartridges, REU | not emulated | inputs read as released; paddles `$FF` |
-| Power-on RAM contents | not emulated | RAM starts as `$00`; real machines show a pattern that three `C64/raminitpattern` programs check |
+| Power-on RAM contents | port | VICE's default C64 pattern (`src/ram.c` with the C64 factory values): two bytes `$00`, then groups of four alternating `$FF`/`$00`, inverted every 16 KB. VICE also flips single bits with a 0.1% chance; sid2midi leaves that out so runs are reproducible (`C64/raminitpattern`) |
+| Colour RAM | exact | 1 KB of 4-bit cells, separate storage from the RAM under the I/O area, which keeps its own contents while I/O is banked out (`C64/bankio`) |
 
 ## Known limits
 
@@ -137,9 +139,8 @@ whenever the tune can observe it.
   sid2midi follows the chip the VICE tests were built from.
 - The NTSC 6567 VSP idle-fetch address is not measured.
 - 185 VICE test programs are not run (unemulated hardware, or tests that mount
-  disk or cartridge images), and 7 of the programs that do run fail: three
-  depend on the power-on RAM pattern, one on disk autostart, and three
-  (`C64/bankio`, two `general/fuxxortest` programs) are not yet diagnosed. See
-  the validation report.
+  disk or cartridge images). Of the 881 that run, 3 fail: two need true 1541
+  drive emulation and one must be autostarted from a disk image, as their own
+  readmes state. See the validation report.
 - SID output is register intent, not sound: filter and waveform timbre are
   mapped to controllers, not reproduced.

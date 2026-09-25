@@ -54,7 +54,7 @@ from vicii_sc import VicIISC
 import residfp
 import mus
 
-VERSION = "3.1.2"
+VERSION = "3.1.3"
 
 PAL_CLOCK, NTSC_CLOCK = 985248.0, 1022727.0
 PAL_CPL, PAL_LINES = 63, 312
@@ -83,6 +83,20 @@ def _rom(name, size):
 KERNAL = _rom("kernal.bin", 8192)
 BASIC = _rom("basic.bin", 8192)
 CHARGEN = _rom("chargen.bin", 4096)
+
+
+def power_on_ram(size=0x10000):
+    """RAM as a C64 finds it at power-on: VICE's default C64 pattern (src/ram.c
+    ``ram_init_with_pattern`` with the C64 factory values RAMInitValueOffset 2,
+    StartValue 0, ValueInvert 4, PatternInvert 16384, PatternInvertValue 255):
+    two bytes $00, then groups of four alternating $FF/$00, the whole pattern
+    inverted every 16 KB.  VICE also flips single bits with a 0.1% chance; that
+    is left out so runs stay reproducible.  Programs that read memory they never
+    wrote see this pattern (VICE testprogs C64/raminitpattern)."""
+    ram = bytearray(size)
+    for off in range(size):
+        ram[off] = (0xFF if (((off + 2) // 4) & 1) else 0x00) ^ (0xFF if ((off // 16384) & 1) else 0x00)
+    return ram
 
 
 # --------------------------------------------------------------- SID file -----
@@ -598,9 +612,7 @@ class SidChip:
         self._age_bus(now)
         if r == 0x19 or r == 0x1A:
             self.bus, self.bus_ttl = 0xFF, self._model_ttl()    # no paddles connected
-        else:
-            self.bus_ttl //= 2
-        return self.bus
+        return self.bus                                 # write-only: the bus keeps its value (reSID)
 
     def _model_ttl(self):
         return residfp.BUS_TTL_8580 if self.model == "8580" else residfp.BUS_TTL_6581
@@ -969,7 +981,8 @@ class C64:
                    "delay_int", "last_op")
 
     def __init__(self, sid_bases=(), pal=True):
-        self.ram = bytearray(0x10000)
+        self.ram = power_on_ram()
+        self.color = bytearray(0x400)               # colour RAM: 4 bits, not the RAM under $D800
         self.ram[0x00], self.ram[0x01] = 0x2F, 0x37      # 6510 port power-on state
         self.kernal, self.basic, self.chargen = KERNAL, BASIC, CHARGEN
         self.pal = pal
@@ -1170,8 +1183,8 @@ class C64:
             if not isinstance(self.vic, VicIISC) and not self._pc_in_kernal_rom():
                 self.use_vicii_sc()
             if isinstance(self.vic, VicIISC):
-                return (self.ram[a] & 0x0F) | (self.vic.read_phi1() & 0xF0)
-            return self.ram[a]
+                return (self.color[a & 0x3FF] & 0x0F) | (self.vic.read_phi1() & 0xF0)
+            return self.color[a & 0x3FF]
         if a < 0xDD00:
             self.predict_dirty = True
             return self.cia1.read(a & 0x0F, self.now())
@@ -1197,7 +1210,7 @@ class C64:
             chip, r = self.sidmap[a]
             chip.write(r, v)
         elif a < 0xDC00:
-            self.ram[a] = v
+            self.color[a & 0x3FF] = v & 0x0F
         elif a < 0xDD00:
             self.predict_dirty = True
             self.cia1.write(a & 0x0F, v, self.now())
@@ -1275,7 +1288,7 @@ class C64:
         return self.run(10 * 1000000, stop_pc=READY_LOOP)
 
     def save_state(self):
-        return {"ram": bytes(self.ram),
+        return {"ram": bytes(self.ram), "color": bytes(self.color),
                 "cpu": {k: getattr(self.cpu, k) for k in self._CPU_FIELDS},
                 "cia1": self.cia1.save(), "cia2": self.cia2.save(), "vic": self.vic.save(),
                 "sid": [chip.save() for chip in self.chips],
@@ -1283,6 +1296,7 @@ class C64:
 
     def restore_state(self, st):
         self.ram[:] = st["ram"]
+        self.color[:] = st["color"]
         for k, v in st["cpu"].items():
             setattr(self.cpu, k, v)
         self.cia1.load(st["cia1"])

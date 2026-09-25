@@ -46,9 +46,11 @@ them and listed in [ACCURACY.md](ACCURACY.md).
 
 A breadbin C64 (PAL or NTSC) with:
 
-- **Memory:** 64 KB RAM, the `$00/$01` processor port with fading unused bits,
-  the PLA banking of BASIC, KERNAL, character ROM and I/O, colour RAM
-  (4 bits), SID mirrors in `$D400-$D7FF`, extra SIDs from PSID v3/v4 headers.
+- **Memory:** 64 KB RAM (filled at power-on with the C64's `$00`/`$FF`
+  pattern), the `$00/$01` processor port with fading unused bits, the PLA
+  banking of BASIC, KERNAL, character ROM and I/O, 1 KB of 4-bit colour RAM
+  (separate from the RAM under the I/O area), SID mirrors in `$D400-$D7FF`,
+  extra SIDs from PSID v3/v4 headers.
   `C64.read` / `C64.write` dispatch by address; I/O goes through `_io_read` /
   `_io_write`.
 - **CPU:** `cpu6502.CPU6502`. Each cycle performs exactly one bus access
